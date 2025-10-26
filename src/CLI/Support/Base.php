@@ -36,18 +36,6 @@ class Base {
         );
     }
 
-    protected function logoLines() {
-        return array(
-            '░██       ░██ ░█████████  ░███     ░███                       ',
-            '░██       ░██ ░██     ░██ ░████   ░████                       ',
-            '░██  ░██  ░██ ░██     ░██ ░██░██ ░██░██  ░███████   ░███████  ',
-            '░██ ░████ ░██ ░█████████  ░██ ░████ ░██ ░██    ░██ ░██    ░██ ',
-            '░██░██ ░██░██ ░██         ░██  ░██  ░██ ░██    ░██ ░██    ░██ ',
-            '░████   ░████ ░██         ░██       ░██ ░██    ░██ ░██    ░██ ',
-            '░███     ░███ ░██         ░██       ░██  ░███████   ░███████  ',
-        );
-    }
-
     protected function detect_project_metadata($path) {
         $metadata = array('name'=>null,'version'=>null,'main'=>null,'slug'=>null);
         foreach (glob(rtrim($path,'/\\') . DIRECTORY_SEPARATOR . '*.php') as $file) {
