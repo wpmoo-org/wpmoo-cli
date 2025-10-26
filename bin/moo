@@ -4,6 +4,9 @@
  * WPMoo CLI bootstrap script (external package).
  */
 
+use WPMoo\Core\App;
+use WPMoo\CLI\CLI;
+
 $autoload_loaded = false;
 $candidates = array_unique(array(
     __DIR__ . '/../vendor/autoload.php',
@@ -23,9 +26,5 @@ if (!class_exists('WPMoo\\Core\\App')) {
     exit(1);
 }
 
-use WPMoo\\Core\\App;
-use WPMoo\\CLI\\CLI;
-
 App::instance()->boot(__FILE__, 'wpmoo');
 CLI::run($argv);
-
