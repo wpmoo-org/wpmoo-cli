@@ -73,5 +73,35 @@ class CLI extends Base {
         if ($summary['plugin_version']) { Console::comment('→ Plugin version: ' . $summary['plugin_version']); }
         Console::line();
     }
-}
 
+    // Local implementations to avoid depending on Support\Base methods
+    // that are not present in the framework version.
+    protected function environmentSummary() {
+        $base_path  = self::framework_base_path();
+        $metadata   = self::detect_project_metadata(rtrim($base_path, '/\\'));
+        $namespace  = self::detect_primary_namespace($base_path);
+        $version    = defined('WPMOO_VERSION') ? WPMOO_VERSION : self::detect_current_version($base_path);
+        $wp_cli_ver = null;
+        if (!$version && !empty($metadata['version'])) { $version = $metadata['version']; }
+        return array(
+            'version'          => $version,
+            'wp_cli_version'   => $wp_cli_ver,
+            'plugin_file'      => !empty($metadata['main']) ? basename((string)$metadata['main']) : null,
+            'plugin_name'      => !empty($metadata['name']) ? $metadata['name'] : null,
+            'plugin_version'   => !empty($metadata['version']) ? $metadata['version'] : null,
+            'plugin_namespace' => $namespace,
+        );
+    }
+
+    protected function logoLines() {
+        return array(
+            '░██       ░██ ░█████████  ░███     ░███                       ',
+            '░██       ░██ ░██     ░██ ░████   ░████                       ',
+            '░██  ░██  ░██ ░██     ░██ ░██░██ ░██░██  ░███████   ░███████  ',
+            '░██ ░████ ░██ ░█████████  ░██ ░████ ░██ ░██    ░██ ░██    ░██ ',
+            '░██░██ ░██░██ ░██         ░██  ░██  ░██ ░██    ░██ ░██    ░██ ',
+            '░████   ░████ ░██         ░██       ░██ ░██    ░██ ░██    ░██ ',
+            '░███     ░███ ░██         ░██       ░██  ░███████   ░███████  ',
+        );
+    }
+}

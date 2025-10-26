@@ -4,17 +4,28 @@
   "license": "GPL-3.0-or-later",
   "homepage": "https://wpmoo.org",
   "authors": [
-    { "name": "WPMoo", "email": "hello@wpmoo.org", "homepage": "https://wpmoo.org/" }
+    {
+      "name": "WPMoo",
+      "email": "hello@wpmoo.org",
+      "homepage": "https://wpmoo.org/"
+    }
   ],
-  "keywords": ["wordpress","cli","wp-cli","plugin","framework","wpmoo"],
+  "keywords": [
+    "wordpress",
+    "cli",
+    "wp-cli",
+    "plugin",
+    "framework",
+    "wpmoo"
+  ],
   "type": "library",
   "require": {
     "php": ">=7.4",
-    "wpmoo/wpmoo": "*"
+    "wpmoo/wpmoo": "dev-dev"
   },
   "autoload": {
     "psr-4": {
-      "WPMoo\\CLI\\": "src/"
+      "WPMoo\\CLI\\": "src/CLI/"
     }
   },
   "bin": [

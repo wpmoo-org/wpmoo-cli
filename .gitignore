@@ -1,0 +1,29 @@
+# Ignore vendor directory & generated CLI
+vendor/
+
+# Ignore generated language templates during development
+languages/
+
+
+# Ignore lock files
+yarn.lock
+package-lock.json
+.pnpm-lock.yaml
+composer.lock
+
+# Ignore editor directories
+.idea/
+.vscode/
+*.log
+*.sql
+*.sqlite
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Ignore node dependency directories (used by grunt)
+node_modules/
+**/.sass-cache
+npm-debug.log
