@@ -1,0 +1,31 @@
+#!/usr/bin/env php
+<?php
+/**
+ * WPMoo CLI bootstrap script (external package).
+ */
+
+$autoload_loaded = false;
+$candidates = array_unique(array(
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+    dirname(__DIR__) . '/vendor/autoload.php',
+));
+foreach ($candidates as $autoload) {
+    if (file_exists($autoload)) { require $autoload; $autoload_loaded = true; break; }
+}
+if (!$autoload_loaded) {
+    fwrite(STDERR, "Could not locate Composer autoload file. Run 'composer install'.\n");
+    exit(1);
+}
+
+if (!class_exists('WPMoo\\Core\\App')) {
+    fwrite(STDERR, "WPMoo framework not found. Please require 'wpmoo/wpmoo' in your project.\n");
+    exit(1);
+}
+
+use WPMoo\\Core\\App;
+use WPMoo\\CLI\\CLI;
+
+App::instance()->boot(__FILE__, 'wpmoo');
+CLI::run($argv);
+

@@ -1,0 +1,41 @@
+{
+  "name": "wpmoo/wpmoo-cli",
+  "description": "WPMoo CLI – modular commands for the WPMoo framework (PHP 7.4+)",
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://wpmoo.org",
+  "authors": [
+    { "name": "WPMoo", "email": "hello@wpmoo.org", "homepage": "https://wpmoo.org/" }
+  ],
+  "keywords": ["wordpress","cli","wp-cli","plugin","framework","wpmoo"],
+  "type": "library",
+  "require": {
+    "php": ">=7.4",
+    "wpmoo/wpmoo": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "WPMoo\\CLI\\": "src/"
+    }
+  },
+  "bin": [
+    "bin/moo"
+  ],
+  "require-dev": {
+    "wpmoo/wpmoo-coding-standards": "dev-main"
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    }
+  },
+  "scripts": {
+    "check:validate": "composer validate",
+    "lint:php": "find . -path './vendor' -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l",
+    "phpcs": "vendor/bin/phpcs --standard=phpcs.xml",
+    "check": [
+      "@check:validate",
+      "@lint:php",
+      "@phpcs"
+    ]
+  }
+}
