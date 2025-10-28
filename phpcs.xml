@@ -6,6 +6,18 @@
     <!-- CLI is a PSR-4 library; relax WordPress file naming rules -->
     <exclude name="WordPress.Files.FileName" />
     <exclude name="Squiz.Classes.ClassFileName" />
+    <!-- CLI: allow output without WP escaping helpers -->
+    <exclude name="WordPress.Security.EscapeOutput" />
+    <!-- CLI: don't require file/class/function docblocks for every symbol -->
+    <exclude name="Squiz.Commenting.FileComment" />
+    <exclude name="Squiz.Commenting.ClassComment" />
+    <exclude name="Squiz.Commenting.FunctionComment" />
+    <!-- CLI: disable Yoda conditions requirement -->
+    <exclude name="WordPress.PHP.YodaConditions" />
+    <!-- CLI: allow camelCase method names -->
+    <exclude name="WordPress.NamingConventions.ValidFunctionName" />
+    <!-- CLI: do not require var docblocks on every member -->
+    <exclude name="Squiz.Commenting.VariableComment" />
   </rule>
 
   <file>src</file>
