@@ -74,7 +74,7 @@ class CheckCommand {
 			$phpunit = $this->findExecutable( array( 'vendor/bin/phpunit', 'phpunit' ) );
 			if ( $phpunit && ( file_exists( $root . '/phpunit.xml' ) || file_exists( $root . '/phpunit.xml.dist' ) ) ) {
 				Console::comment( '→ PHPUnit' );
-				$status = $this->run( $phpunit, array( '-v' ) );
+				$status = $this->run( $phpunit, array() );
 				$failed = $failed || ( 0 !== $status );
 			} else {
 				Console::warning( 'PHPUnit not configured; skipping' );
