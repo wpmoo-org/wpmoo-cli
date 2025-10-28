@@ -27,3 +27,5 @@ ehthumbs.db
 node_modules/
 **/.sass-cache
 npm-debug.log
+# PHPUnit cache
+.phpunit.result.cache
