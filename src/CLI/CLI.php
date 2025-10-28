@@ -6,6 +6,7 @@ use WPMoo\CLI\Contracts\CommandInterface;
 use WPMoo\CLI\Commands\BuildCommand;
 use WPMoo\CLI\Commands\DeployCommand;
 use WPMoo\CLI\Commands\DistCommand;
+use WPMoo\CLI\Commands\CheckCommand;
 use WPMoo\CLI\Commands\InfoCommand;
 use WPMoo\CLI\Commands\UpdateCommand;
 use WPMoo\CLI\Commands\VersionCommand;
@@ -23,6 +24,7 @@ class CLI extends Base {
 			'update'  => new UpdateCommand(),
 			'version' => new VersionCommand(),
 			'dist'    => new DistCommand(),
+			'check'   => new CheckCommand(),
 			'build'   => new BuildCommand(),
 			'deploy'  => new DeployCommand(),
 			'release' => new ReleaseCommand(),
@@ -66,6 +68,7 @@ class CLI extends Base {
 			'build'   => 'Build front-end assets',
 			'deploy'  => 'Create a deployable copy (optionally zipped)',
 			'dist'    => 'Produce a distributable archive',
+			'check'   => 'Composer validate, PHPCBF, PHPCS, PHPStan, PHPUnit',
 			'release' => 'Release helpers (TBD)',
 			'rename'  => 'Rename starter plugin (name/slug/namespace)',
 		);
