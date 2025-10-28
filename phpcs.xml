@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<ruleset name="WPMoo CLI">
+  <description>PHPCS rules for the WPMoo CLI package.</description>
+
+  <rule ref="WPMoo"/>
+
+  <file>src</file>
+
+  <exclude-pattern>vendor/*</exclude-pattern>
+  <exclude-pattern>node_modules/*</exclude-pattern>
+</ruleset>
+
