@@ -2,11 +2,14 @@
 <ruleset name="WPMoo CLI">
   <description>PHPCS rules for the WPMoo CLI package.</description>
 
-  <rule ref="WPMoo"/>
+  <rule ref="WPMoo">
+    <!-- CLI is a PSR-4 library; relax WordPress file naming rules -->
+    <exclude name="WordPress.Files.FileName" />
+    <exclude name="Squiz.Classes.ClassFileName" />
+  </rule>
 
   <file>src</file>
 
   <exclude-pattern>vendor/*</exclude-pattern>
   <exclude-pattern>node_modules/*</exclude-pattern>
 </ruleset>
-
