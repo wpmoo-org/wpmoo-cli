@@ -4,7 +4,6 @@
  * WPMoo CLI bootstrap script (external package).
  */
 
-use WPMoo\Core\App;
 use WPMoo\CLI\CLI;
 
 $autoload_loaded = false;
@@ -21,10 +20,4 @@ if (!$autoload_loaded) {
     exit(1);
 }
 
-if (!class_exists('WPMoo\\Core\\App')) {
-    fwrite(STDERR, "WPMoo framework not found. Please require 'wpmoo/wpmoo' in your project.\n");
-    exit(1);
-}
-
-App::instance()->boot(__FILE__, 'wpmoo');
 CLI::run($argv);

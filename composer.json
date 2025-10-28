@@ -20,8 +20,10 @@
   ],
   "type": "library",
   "require": {
-    "php": ">=7.4",
-    "wpmoo/wpmoo": "dev-main || dev-master || dev-dev || ^0.4"
+    "php": ">=7.4"
+  },
+  "suggest": {
+    "wpmoo/wpmoo": "Provides extra helpers when running inside WPMoo-based projects"
   },
   "autoload": {
     "psr-4": {
