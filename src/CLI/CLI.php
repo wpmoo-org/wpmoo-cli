@@ -69,7 +69,7 @@ class CLI extends Base {
 			'deploy'  => 'Create a deployable copy (optionally zipped)',
 			'dist'    => 'Produce a distributable archive',
 			'check'   => 'Composer validate, PHPCBF, PHPCS, PHPStan, PHPUnit',
-			'release' => 'Release helpers (TBD)',
+			'release' => 'Run release flow (version, update, build, package)',
 			'rename'  => 'Rename starter plugin (name/slug/namespace)',
 		);
 	}

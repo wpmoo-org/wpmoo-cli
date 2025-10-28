@@ -22,7 +22,7 @@ class CheckCommand {
 
 		$failed = false;
 
-		// 1) Composer validate (non-strict lock)
+		// 1) Composer validate (non-strict lock).
 		if ( file_exists( $root . '/composer.json' ) ) {
 			$composer = $this->findExecutable( array( 'composer' ) );
 			if ( $composer ) {
@@ -34,7 +34,7 @@ class CheckCommand {
 			}
 		}
 
-		// 2) PHPCBF (auto-fix) unless disabled
+		// 2) PHPCBF (auto-fix) unless disabled.
 		if ( ! $opts['no-fix'] ) {
 			$phpcbf = $this->localBin( 'phpcbf' );
 			if ( $phpcbf ) {
@@ -46,7 +46,7 @@ class CheckCommand {
 			}
 		}
 
-		// 3) PHPCS (errors only)
+		// 3) PHPCS (errors only).
 		$phpcs = $this->localBin( 'phpcs' );
 		if ( $phpcs ) {
 			Console::comment( '→ PHPCS (errors only)' );
@@ -58,7 +58,7 @@ class CheckCommand {
 		}
 
 		if ( ! $opts['quick'] ) {
-			// 4) PHPStan (if configured)
+			// 4) PHPStan (if configured).
 			$phpstan = $this->localBin( 'phpstan' );
 			if ( $phpstan && ( file_exists( $root . '/phpstan.neon' ) || file_exists( $root . '/phpstan.neon.dist' ) ) ) {
 				Console::comment( '→ PHPStan' );
@@ -70,7 +70,7 @@ class CheckCommand {
 				Console::warning( 'PHPStan not configured; skipping' );
 			}
 
-			// 5) PHPUnit (if configured)
+			// 5) PHPUnit (if configured).
 			$phpunit = $this->findExecutable( array( 'vendor/bin/phpunit', 'phpunit' ) );
 			if ( $phpunit && ( file_exists( $root . '/phpunit.xml' ) || file_exists( $root . '/phpunit.xml.dist' ) ) ) {
 				Console::comment( '→ PHPUnit' );

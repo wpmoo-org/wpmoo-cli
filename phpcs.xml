@@ -2,7 +2,8 @@
 <ruleset name="WPMoo CLI">
   <description>PHPCS rules for the WPMoo CLI package.</description>
 
-  <rule ref="WPMoo">
+  <!-- Reference shared coding standard directly from vendor path -->
+  <rule ref="./vendor/wpmoo/wpmoo-coding-standards/WPMoo/ruleset.xml">
     <!-- CLI is a PSR-4 library; relax WordPress file naming rules -->
     <exclude name="WordPress.Files.FileName" />
     <exclude name="Squiz.Classes.ClassFileName" />
