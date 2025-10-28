@@ -21,7 +21,7 @@
   "type": "library",
   "require": {
     "php": ">=7.4",
-    "wpmoo/wpmoo": "dev-main"
+    "wpmoo/wpmoo": "dev-main || dev-master || dev-dev || ^0.4"
   },
   "autoload": {
     "psr-4": {
