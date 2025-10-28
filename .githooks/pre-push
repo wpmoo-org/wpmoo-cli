@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "WPMoo CLI pre-push: composer validate, PHPCS"
+
+if command -v composer >/dev/null 2>&1 && [ -f composer.json ]; then
+  composer validate --strict --no-check-lock --ansi || exit 1
+fi
+
+if [ -x vendor/bin/phpcs ]; then
+  echo "→ Running PHPCS (errors only)"
+  if [ -f phpcs.xml ]; then
+    vendor/bin/phpcs -n --standard=phpcs.xml || exit 1
+  else
+    vendor/bin/phpcs -n || exit 1
+  fi
+fi
+
+echo "✔ Pre-push checks passed"
+exit 0
+
