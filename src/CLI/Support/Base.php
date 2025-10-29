@@ -433,12 +433,12 @@ class Base {
 	 * @return array<string, mixed>
 	 */
 	protected function parse_deploy_options( array $args ) {
-		$options                  = $this->parse_build_options( $args );
-		$options['target']        = null;
-		$options['zip']           = false;
-		$options['zip-path']      = null;
-		$options['no-build']      = false;
-		$options['work-path']     = null;
+		$options                   = $this->parse_build_options( $args );
+		$options['target']         = null;
+		$options['zip']            = false;
+		$options['zip-path']       = null;
+		$options['no-build']       = false;
+		$options['work-path']      = null;
 		$options['keep-manifests'] = false;
 
 		foreach ( $args as $arg ) {
@@ -620,7 +620,38 @@ class Base {
 	 * @return array<int,string>
 	 */
 	protected function default_deploy_exclusions() {
-		return array( '.git', '.github', '.githooks', 'node_modules', 'bin', 'dist', 'tests', '.idea', '.vscode', '*.map' );
+		return array(
+			// VCS / tooling.
+			'.git',
+			'.github',
+			'.githooks',
+			'.idea',
+			'.vscode',
+			'.gitignore',
+			// Hidden files (dotfiles).
+			'.*',
+			// JS build & config.
+			'node_modules',
+			'bin',
+			'dist',
+			'gulpfile.js',
+			'webpack.*',
+			'rollup.*',
+			'vite.*',
+			'package.json',
+			'package-lock.json',
+			'yarn.lock',
+			'pnpm-lock.yaml',
+			'pnpm-workspace.yaml',
+			// PHP / QA configs not needed at runtime.
+			'phpunit.xml',
+			'phpunit.xml.dist',
+			'phpstan*',
+			// Maps and other development artifacts.
+			'*.map',
+			// Tests.
+			'tests',
+		);
 	}
 
 	/**
@@ -752,14 +783,17 @@ class Base {
 	 */
 	protected function post_process_deploy( $working_dir, array $options ) {
 		$keep = ! empty( $options['keep-manifests'] );
+		// Keep composer.json only when requested; always drop JS build manifests and lockfiles.
 		if ( ! $keep ) {
 			$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'composer.json' );
-			$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'composer.lock' );
-			$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'package.json' );
-			$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'package-lock.json' );
-			$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'pnpm-lock.yaml' );
-			$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'yarn.lock' );
 		}
+		// Always drop Composer lock (not needed at runtime).
+		$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'composer.lock' );
+		// Always drop JS build manifests and lockfiles.
+		$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'package.json' );
+		$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'package-lock.json' );
+		$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'pnpm-lock.yaml' );
+		$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'yarn.lock' );
 	}
 
 	// ---------------------------------------------------------------------
