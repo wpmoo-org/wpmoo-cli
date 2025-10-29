@@ -433,12 +433,13 @@ class Base {
 	 * @return array<string, mixed>
 	 */
 	protected function parse_deploy_options( array $args ) {
-		$options              = $this->parse_build_options( $args );
-		$options['target']    = null;
-		$options['zip']       = false;
-		$options['zip-path']  = null;
-		$options['no-build']  = false;
-		$options['work-path'] = null;
+		$options                  = $this->parse_build_options( $args );
+		$options['target']        = null;
+		$options['zip']           = false;
+		$options['zip-path']      = null;
+		$options['no-build']      = false;
+		$options['work-path']     = null;
+		$options['keep-manifests'] = false;
 
 		foreach ( $args as $arg ) {
 			$arg = (string) $arg;
@@ -450,6 +451,8 @@ class Base {
 				$options['zip']      = true;
 				$zip_value           = substr( $arg, 6 );
 				$options['zip-path'] = '' !== $zip_value ? $zip_value : null;
+			} elseif ( '--wp' === $arg || '--keep-manifests' === $arg ) {
+				$options['keep-manifests'] = true;
 			} elseif ( '-' !== substr( $arg, 0, 1 ) && null === $options['target'] ) {
 				$options['target'] = $arg;
 			}
@@ -748,12 +751,15 @@ class Base {
 	 * @return void
 	 */
 	protected function post_process_deploy( $working_dir, array $options ) {
-		$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'composer.json' );
-		$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'composer.lock' );
-		$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'package.json' );
-		$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'package-lock.json' );
-		$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'pnpm-lock.yaml' );
-		$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'yarn.lock' );
+		$keep = ! empty( $options['keep-manifests'] );
+		if ( ! $keep ) {
+			$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'composer.json' );
+			$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'composer.lock' );
+			$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'package.json' );
+			$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'package-lock.json' );
+			$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'pnpm-lock.yaml' );
+			$this->remove_if_exists( $working_dir . DIRECTORY_SEPARATOR . 'yarn.lock' );
+		}
 	}
 
 	// ---------------------------------------------------------------------
