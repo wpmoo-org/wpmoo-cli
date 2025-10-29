@@ -53,3 +53,6 @@ jobs:
           else
             vendor/bin/phpcs -n || true
           fi
+      - name: CLI smoke test (help)
+        run: |
+          php bin/moo --help || vendor/bin/moo --help
