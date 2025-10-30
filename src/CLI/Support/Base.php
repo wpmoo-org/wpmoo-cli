@@ -712,6 +712,29 @@ class Base {
 	}
 
 	/**
+	 * Default include list for framework distribution builds.
+	 *
+	 * When packaging the WPMoo framework itself, we copy a curated set of
+	 * top-level entries into the working directory before pruning.
+	 *
+	 * @param string $source_root Absolute path to the framework root.
+	 * @return array<int,string>
+	 */
+	protected function default_dist_includes( $source_root ) {
+		return array(
+			'assets',
+			'src',
+			'vendor',
+			'wpmoo.php',
+			'live.php',
+			'local.php',
+			'index.php',
+			'readme.txt',
+			'languages',
+		);
+	}
+
+	/**
 	 * No-op vendor pruning for external CLI.
 	 *
 	 * @param string $path Vendor path.

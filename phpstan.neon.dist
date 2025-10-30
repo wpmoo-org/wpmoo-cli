@@ -1,0 +1,10 @@
+parameters:
+    level: 0
+    phpVersion: 70400
+    paths:
+        - src
+    excludePaths:
+        - vendor
+        - tests
+    reportUnmatchedIgnoredErrors: false
+    treatPhpDocTypesAsCertain: false

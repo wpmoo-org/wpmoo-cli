@@ -40,7 +40,8 @@
   ],
   "require-dev": {
     "wpmoo/wpmoo-coding-standards": "dev-main",
-    "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "phpstan/phpstan": "^1.11"
   },
   "config": {
     "allow-plugins": {
@@ -48,15 +49,19 @@
     }
   },
   "scripts": {
+    "moo": "php bin/moo",
     "check:validate": "composer validate",
     "lint:php": "find . -path './vendor' -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l",
     "phpcs": "vendor/bin/phpcs -n",
     "phpcbf": "vendor/bin/phpcbf",
+    "phpstan": "vendor/bin/phpstan analyse --no-progress --memory-limit=512M",
     "hooks:install": "git config core.hooksPath .githooks && chmod +x .githooks/pre-commit .githooks/pre-push",
     "check": [
       "@check:validate",
       "@lint:php",
-      "@phpcs"
+      "@phpcbf",
+      "@phpcs",
+      "@phpstan"
     ]
   }
 }

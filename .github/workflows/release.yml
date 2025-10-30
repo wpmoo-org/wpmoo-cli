@@ -45,6 +45,14 @@ jobs:
             echo "No phpcs script; skipping."
           fi
 
+      - name: Run PHPStan
+        run: |
+          if composer run -q phpstan 2>/dev/null; then
+            composer phpstan
+          else
+            echo "No phpstan script; skipping."
+          fi
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v1
         with:
