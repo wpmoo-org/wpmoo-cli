@@ -16,6 +16,17 @@ class PluginCheckCommand extends Base implements CommandInterface {
 		} elseif ( getenv( 'WP_PATH' ) ) {
 			$wp_path = (string) getenv( 'WP_PATH' );
 		}
+		// Fallback: try to auto-detect a WordPress root by walking parents and
+		// common web roots (public_html, htdocs, WordPress, wp).
+		if ( ! $wp_path || ! is_dir( $wp_path ) ) {
+			$cwd      = getcwd();
+			$start_at = $cwd ? (string) $cwd : '.';
+			$detected = $this->detect_wp_root( $start_at );
+			if ( $detected && is_dir( $detected ) ) {
+				$wp_path = $detected;
+				Console::comment( '→ Auto-detected WordPress at: ' . $wp_path );
+			}
+		}
 		if ( ! $wp_path || ! is_dir( $wp_path ) ) {
 			Console::warning( 'Set --path=<wordpress_root> or WP_PATH env.' );
 			return 0; // Do not fail CI locally.
@@ -143,5 +154,42 @@ class PluginCheckCommand extends Base implements CommandInterface {
 		}
 		// Failed if any errors.
 		return $errors > 0;
+	}
+
+	/**
+	 * Best-effort WordPress root auto-detection.
+	 *
+	 * Walk up to five parent levels from base; at each level, check for
+	 * wp-config.php in the directory itself or in common web roots.
+	 *
+	 * @param string $base Base directory.
+	 * @return string|null Absolute path to WP root, or null if not found.
+	 */
+	private function detect_wp_root( $base ) {
+		$base = (string) $base;
+		$max  = 5;
+		$dir  = realpath( $base );
+		if ( false === $dir ) {
+			$dir = $base;
+		}
+		for ( $i = 0; $i <= $max; $i++ ) {
+			$probe = rtrim( (string) $dir, '/\\' );
+			if ( '' !== $probe && file_exists( $probe . DIRECTORY_SEPARATOR . 'wp-config.php' ) ) {
+				return $probe;
+			}
+			$web_roots = array( 'public_html', 'htdocs', 'wordpress', 'wp' );
+			foreach ( $web_roots as $root ) {
+				$alt = $probe . DIRECTORY_SEPARATOR . $root;
+				if ( file_exists( $alt . DIRECTORY_SEPARATOR . 'wp-config.php' ) ) {
+					return $alt;
+				}
+			}
+			$parent = dirname( $probe );
+			if ( $parent === $probe ) {
+				break; // Reached filesystem root.
+			}
+			$dir = $parent;
+		}
+		return null;
 	}
 }
