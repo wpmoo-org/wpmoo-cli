@@ -1,4 +1,17 @@
 <?php
+/**
+ * WPMoo CLI — Application entry point.
+ *
+ * Registers available commands and dispatches incoming argv to the relevant
+ * command handler. Provides a small built‑in help/usage renderer and an
+ * ASCII logo banner with environment details.
+ *
+ * @package WPMoo\CLI
+ * @since 0.3.0
+ * @link  https://wpmoo.org WPMoo – WordPress Micro Object-Oriented Framework.
+ * @link  https://github.com/wpmoo/wpmoo GitHub Repository.
+ * @license GPL-3.0-or-later
+ */
 
 namespace WPMoo\CLI;
 
@@ -16,10 +29,21 @@ use WPMoo\CLI\Commands\PluginCheckCommand;
 use WPMoo\CLI\Console;
 use WPMoo\CLI\Support\Base;
 
+/**
+ * CLI kernel.
+ *
+ * Responsible for registering commands and routing argv.
+ */
 class CLI extends Base {
+	/**
+	 * Registered commands map (command => handler).
+	 *
+	 * @var array<string, CommandInterface>
+	 */
 	protected $commands = array();
 
 	public function __construct() {
+		// Register built‑in commands. Keys are CLI verbs; values are handlers.
 		$this->commands = array(
 			'info'     => new InfoCommand(),
 			'update'   => new UpdateCommand(),
@@ -34,18 +58,37 @@ class CLI extends Base {
 		);
 	}
 
+	/**
+	 * Static bootstrap used by the bin script.
+	 *
+	 * @param array<int, string> $argv Raw argv vector (including program name).
+	 * @return void
+	 */
 	public static function run( $argv ) {
-		( new self() )->handle( $argv ); }
+		( new self() )->handle( $argv );
+	}
 
+	/**
+	 * Dispatch argv to a command handler.
+	 *
+	 * @param array<int, string> $argv Raw argv vector.
+	 * @return int Process exit status (0 on success).
+	 */
 	public function handle( array $argv ) {
 		$command = isset( $argv[1] ) ? (string) $argv[1] : 'help';
 		if ( 'help' === $command || ! isset( $this->commands[ $command ] ) ) {
 			$this->renderHelp();
-			return 0; }
+			return 0;
+		}
 		$args = array_slice( $argv, 2 );
 		return (int) $this->commands[ $command ]->handle( $args );
 	}
 
+	/**
+	 * Render usage and the list of available commands.
+	 *
+	 * @return void
+	 */
 	protected function renderHelp() {
 		$this->renderWelcome();
 		Console::line( 'Usage:' );
@@ -55,13 +98,20 @@ class CLI extends Base {
 		$definitions = $this->definitions();
 		$width       = 0;
 		foreach ( array_keys( $definitions ) as $cmd ) {
-			$width = max( $width, strlen( $cmd ) ); }
+			$width = max( $width, strlen( $cmd ) );
+		}
 		foreach ( $definitions as $cmd => $desc ) {
 			$padding = str_repeat( ' ', $width - strlen( $cmd ) + 2 );
-			Console::line( '  ' . $cmd . $padding . $desc ); }
+			Console::line( '  ' . $cmd . $padding . $desc );
+		}
 		Console::line();
 	}
 
+	/**
+	 * Command definitions used for help text.
+	 *
+	 * @return array<string, string> Map of command => description.
+	 */
 	protected function definitions() {
 		return array(
 			'info'     => 'Show framework info',
@@ -77,11 +127,17 @@ class CLI extends Base {
 		);
 	}
 
+	/**
+	 * Render banner and environment summary.
+	 *
+	 * @return void
+	 */
 	protected function renderWelcome() {
 		$summary = $this->environmentSummary();
 		Console::line();
 		foreach ( $this->logoLines() as $line ) {
-			Console::banner( $line ); }
+			Console::banner( $line );
+		}
 		$version = $summary['version'] ? $summary['version'] : 'dev';
 		Console::comment( 'WPMoo Version ' . $version );
 		Console::line();
@@ -89,12 +145,18 @@ class CLI extends Base {
 		Console::comment( '→ WP-CLI version: ' . $wp_cli );
 		Console::comment( sprintf( '→ Current Plugin File, Name, Namespace: \'%s\', \'%s\', \'%s\'', $summary['plugin_file'] ? $summary['plugin_file'] : 'n/a', $summary['plugin_name'] ? $summary['plugin_name'] : 'n/a', $summary['plugin_namespace'] ? $summary['plugin_namespace'] : 'n/a' ) );
 		if ( $summary['plugin_version'] ) {
-			Console::comment( '→ Plugin version: ' . $summary['plugin_version'] ); }
+			Console::comment( '→ Plugin version: ' . $summary['plugin_version'] );
+		}
 		Console::line();
 	}
 
-	// Local implementations to avoid depending on Support\Base methods
-	// that are not present in the framework version.
+	/**
+	 * Collect a shallow environment summary for the banner.
+	 *
+	 * Local implementation to avoid hard dependency on framework helpers.
+	 *
+	 * @return array<string, mixed>
+	 */
 	protected function environmentSummary() {
 		$base_path  = self::framework_base_path();
 		$metadata   = self::detect_project_metadata( rtrim( $base_path, '/\\' ) );
@@ -102,7 +164,8 @@ class CLI extends Base {
 		$version    = defined( 'WPMOO_VERSION' ) ? WPMOO_VERSION : self::detect_current_version( $base_path );
 		$wp_cli_ver = null;
 		if ( ! $version && ! empty( $metadata['version'] ) ) {
-			$version = $metadata['version']; }
+			$version = $metadata['version'];
+		}
 		return array(
 			'version'          => $version,
 			'wp_cli_version'   => $wp_cli_ver,
@@ -113,6 +176,11 @@ class CLI extends Base {
 		);
 	}
 
+	/**
+	 * ASCII logo lines for the banner.
+	 *
+	 * @return array<int, string>
+	 */
 	protected function logoLines() {
 		return array(
 			'░██       ░██ ░█████████  ░███     ░███                       ',

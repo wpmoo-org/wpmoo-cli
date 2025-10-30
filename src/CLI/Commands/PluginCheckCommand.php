@@ -1,4 +1,17 @@
 <?php
+/**
+ * WordPress Plugin Check command.
+ *
+ * Executes `wp plugin check` against the active plugin slug and pretty‑prints
+ * the results with colours and a tabular summary. The command can auto‑detect
+ * the WordPress installation root when `--path`/`WP_PATH` is not provided.
+ *
+ * @package WPMoo\CLI
+ * @since 0.3.0
+ * @link  https://wpmoo.org WPMoo – WordPress Micro Object-Oriented Framework.
+ * @link  https://github.com/wpmoo/wpmoo GitHub Repository.
+ * @license GPL-3.0-or-later
+ */
 
 namespace WPMoo\CLI\Commands;
 
@@ -6,7 +19,22 @@ use WPMoo\CLI\Contracts\CommandInterface;
 use WPMoo\CLI\Support\Base;
 use WPMoo\CLI\Console;
 
+/**
+ * Runs WP Plugin Check and renders a readable report.
+ */
 class PluginCheckCommand extends Base implements CommandInterface {
+	/**
+	 * Handle the command.
+	 *
+	 * Options (argv style):
+	 *  --path=<WP root>       Absolute path to WordPress root.
+	 *  --slug=<plugin-slug>   Plugin slug to check (defaults to detected slug).
+	 *  --no-strict            Use non‑strict JSON format.
+	 *  --ignore-codes=A,B     Comma‑separated list of codes to ignore.
+	 *
+	 * @param array<int, string> $args CLI arguments (after the command verb).
+	 * @return int Exit code (0=OK, 1=errors found).
+	 */
 	public function handle( array $args = array() ) {
 		$opts = $this->parseOptions( $args );
 
@@ -57,6 +85,12 @@ class PluginCheckCommand extends Base implements CommandInterface {
 		return 0;
 	}
 
+	/**
+	 * Parse argv options into a normalized array.
+	 *
+	 * @param array<int, string> $args Raw argv values.
+	 * @return array{path: ?string, slug: ?string, strict: bool, ignore: string}
+	 */
 	private function parseOptions( array $args ) {
 		$opts = array(
 			'path'   => null,
@@ -81,6 +115,12 @@ class PluginCheckCommand extends Base implements CommandInterface {
 		return $opts;
 	}
 
+	/**
+	 * Extract JSON rows from noisy CLI output.
+	 *
+	 * @param string $raw Raw combined output from the command.
+	 * @return array<int, array<string, mixed>> Parsed rows.
+	 */
 	private function parse_json_rows( $raw ) {
 		$start = strpos( $raw, '[' );
 		$end   = strrpos( $raw, ']' );
@@ -92,6 +132,12 @@ class PluginCheckCommand extends Base implements CommandInterface {
 		return is_array( $data ) ? $data : array();
 	}
 
+	/**
+	 * Render the coloured table and summary. Returns true if any errors.
+	 *
+	 * @param array<int, array<string, mixed>> $rows Parsed rows from JSON.
+	 * @return bool Whether any ERROR rows were present.
+	 */
 	private function render_table( array $rows ) {
 		$errors   = 0;
 		$warnings = 0;
@@ -157,7 +203,7 @@ class PluginCheckCommand extends Base implements CommandInterface {
 	}
 
 	/**
-	 * Best-effort WordPress root auto-detection.
+	 * Best‑effort WordPress root auto‑detection.
 	 *
 	 * Walk up to five parent levels from base; at each level, check for
 	 * wp-config.php in the directory itself or in common web roots.
