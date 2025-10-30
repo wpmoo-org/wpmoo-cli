@@ -27,18 +27,14 @@ class PluginCheckCommand extends Base implements CommandInterface {
 		Console::line();
 		Console::comment( 'WP Plugin Check — ' . $slug );
 
-		// Run `wp plugin check` and capture output to a temp file.
-		$tmp  = $this->create_temp_file();
+		// Run `wp plugin check` and capture output.
 		$args = array( '--path=' . $wp_path, 'plugin', 'check', $slug, '--format=' . $format );
 		if ( $opts['ignore'] ) {
 			$args[] = '--ignore-codes=' . $opts['ignore'];
 		}
 		list( $exit, $out ) = $this->execute_command( 'wp', $args, null );
-		// Persist output for parsing/pretty print.
-		file_put_contents( $tmp, implode( "\n", $out ) );
-
-		$rows = $this->parse_json_rows( (string) file_get_contents( $tmp ) );
-		@unlink( $tmp );
+		$raw                = implode( "\n", $out );
+		$rows               = $this->parse_json_rows( $raw );
 
 		$failed = $this->render_table( $rows );
 		Console::line();
