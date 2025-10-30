@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/wpmoo-org/wpmoo-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/wpmoo-org/wpmoo-cli/actions/workflows/ci.yml)
 ![PHP >=7.4](https://img.shields.io/badge/PHP-%3E%3D7.4-8892BF)
-[![License: GPL-3.0-or-later](https://img.shields.io/badge/License-GPLv3%2B-green.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
+[![License: GPL-2.0-or-later](https://img.shields.io/badge/License-GPLv3%2B-green.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 Modular command-line tools for the WPMoo framework. Ships commands like `info`, `check` (QA), `build`, `dist`, `deploy`, `version`, `release`, and `rename`.
 
