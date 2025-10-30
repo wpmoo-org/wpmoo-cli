@@ -12,6 +12,7 @@ use WPMoo\CLI\Commands\UpdateCommand;
 use WPMoo\CLI\Commands\VersionCommand;
 use WPMoo\CLI\Commands\ReleaseCommand;
 use WPMoo\CLI\Commands\RenameCommand;
+use WPMoo\CLI\Commands\PluginCheckCommand;
 use WPMoo\CLI\Console;
 use WPMoo\CLI\Support\Base;
 
@@ -25,6 +26,7 @@ class CLI extends Base {
 			'version' => new VersionCommand(),
 			'dist'    => new DistCommand(),
 			'check'   => new CheckCommand(),
+			'wp-check'=> new PluginCheckCommand(),
 			'build'   => new BuildCommand(),
 			'deploy'  => new DeployCommand(),
 			'release' => new ReleaseCommand(),
@@ -69,6 +71,7 @@ class CLI extends Base {
 			'deploy'  => 'Create a deployable copy (optionally zipped)',
 			'dist'    => 'Produce a distributable archive',
 			'check'   => 'Composer validate, PHPCBF, PHPCS, PHPStan, PHPUnit',
+			'wp-check'=> 'Run WordPress Plugin Check and pretty-print results',
 			'release' => 'Run release flow (version, update, build, package)',
 			'rename'  => 'Rename starter plugin (name/slug/namespace)',
 		);
