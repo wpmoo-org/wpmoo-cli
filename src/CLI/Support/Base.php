@@ -1011,9 +1011,14 @@ class Base {
 				$raw  = file_get_contents( $composer );
 				$data = is_string( $raw ) ? json_decode( $raw, true ) : null;
 				if ( is_array( $data ) ) {
-					$data['version'] = $new_version;
-					$this->write_json_file( $composer, $data );
-					$updated[] = $composer;
+					// Packagist best practice: omit composer.json version and rely on VCS tags.
+					// Only update if a version key is already present or the environment explicitly opts-in.
+					$should_update = array_key_exists( 'version', $data ) || (bool) getenv( 'WPMOO_UPDATE_COMPOSER_VERSION' );
+					if ( $should_update ) {
+						$data['version'] = $new_version;
+						$this->write_json_file( $composer, $data );
+						$updated[] = $composer;
+					}
 				}
 			}
 		}
@@ -1022,10 +1027,44 @@ class Base {
 		if ( ! empty( $meta['main'] ) && file_exists( $meta['main'] ) && ! $dry_run ) {
 			$contents = file_get_contents( $meta['main'] );
 			if ( is_string( $contents ) ) {
+				// Update plugin header Version: x.y.z.
 				$replaced = preg_replace( '/^([ \t\/*#@]*Version:\s*)(.*)$/mi', '$1' . $new_version, $contents );
+				// Update a common VERSION constant if present in the main file.
+				$replaced = is_string( $replaced ) ? preg_replace( "/define\(\s*'[^']*_VERSION'\s*,\s*'[^']*'\s*\)\s*;/", "define( 'WPMOO_VERSION', '" . $new_version . "' );", $replaced ) : $replaced; // phpcs:ignore Generic.Files.LineLength
 				if ( is_string( $replaced ) && $replaced !== $contents ) {
 					file_put_contents( $meta['main'], $replaced );
 					$updated[] = $meta['main'];
+				}
+			}
+		}
+
+		// Update readme Stable tag if present at project root.
+		$readme = rtrim( (string) $base_path, '/\\' ) . DIRECTORY_SEPARATOR . 'readme.txt';
+		if ( file_exists( $readme ) ) {
+			if ( $dry_run ) {
+				$updated[] = $readme;
+			} else {
+				$raw      = file_get_contents( $readme );
+				$replaced = is_string( $raw ) ? preg_replace( '/^(Stable tag:\s*)(.*)$/mi', '$1' . $new_version, $raw ) : null;
+				if ( is_string( $replaced ) && $replaced !== $raw ) {
+					file_put_contents( $readme, $replaced );
+					$updated[] = $readme;
+				}
+			}
+		}
+
+		// Update package.json version if present.
+		$pkg = rtrim( (string) $base_path, '/\\' ) . DIRECTORY_SEPARATOR . 'package.json';
+		if ( file_exists( $pkg ) ) {
+			if ( $dry_run ) {
+				$updated[] = $pkg;
+			} else {
+				$raw  = file_get_contents( $pkg );
+				$data = is_string( $raw ) ? json_decode( $raw, true ) : null;
+				if ( is_array( $data ) ) {
+					$data['version'] = $new_version;
+					$this->write_json_file( $pkg, $data );
+					$updated[] = $pkg;
 				}
 			}
 		}

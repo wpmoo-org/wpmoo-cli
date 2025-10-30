@@ -22,6 +22,11 @@
   "require": {
     "php": ">=7.4"
   },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "0.1.x-dev"
+    }
+  },
   "suggest": {
     "wpmoo/wpmoo": "Provides extra helpers when running inside WPMoo-based projects"
   },
