@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "WPMoo CLI pre-commit: validate, lint, PHPCS"
+echo "WPMoo CLI pre-commit: validate, PHPCBF, PHPCS"
 
 # Allow hard skip via environment variable
 if [ "${WPMOO_SKIP_HOOKS:-0}" = "1" ]; then
@@ -29,12 +29,23 @@ if [ -n "${PHP_FILES}" ]; then
   done <<< "${PHP_FILES}"
 fi
 
-if [ -x vendor/bin/phpcs ] && [ -n "${PHP_FILES}" ]; then
-  echo "→ Running PHPCS on staged files (errors only)"
-  if [ -f phpcs.xml ]; then
-    vendor/bin/phpcs -n --standard=phpcs.xml ${PHP_FILES} || exit 1
-  else
-    vendor/bin/phpcs -n ${PHP_FILES} || exit 1
+if [ -n "${PHP_FILES}" ]; then
+  if [ -x vendor/bin/phpcbf ]; then
+    echo "→ PHPCBF (auto-fix staged files)"
+    if [ -f phpcs.xml ]; then
+      vendor/bin/phpcbf --standard=phpcs.xml ${PHP_FILES} || true
+    else
+      vendor/bin/phpcbf ${PHP_FILES} || true
+    fi
+    git add ${PHP_FILES}
+  fi
+  if [ -x vendor/bin/phpcs ]; then
+    echo "→ PHPCS (errors only, staged files)"
+    if [ -f phpcs.xml ]; then
+      vendor/bin/phpcs -n --standard=phpcs.xml ${PHP_FILES} || exit 1
+    else
+      vendor/bin/phpcs -n ${PHP_FILES} || exit 1
+    fi
   fi
 fi
 
