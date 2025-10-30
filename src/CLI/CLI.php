@@ -7,7 +7,7 @@
  * ASCII logo banner with environment details.
  *
  * @package WPMoo\CLI
- * @since 0.3.0
+ * @since x.x.x
  * @link  https://wpmoo.org WPMoo – WordPress Micro Object-Oriented Framework.
  * @link  https://github.com/wpmoo/wpmoo GitHub Repository.
  * @license GPL-3.0-or-later
@@ -28,6 +28,7 @@ use WPMoo\CLI\Commands\RenameCommand;
 use WPMoo\CLI\Commands\PluginCheckCommand;
 use WPMoo\CLI\Console;
 use WPMoo\CLI\Support\Base;
+use WPMoo\CLI\Support\Version;
 
 /**
  * CLI kernel.
@@ -140,6 +141,8 @@ class CLI extends Base {
 		}
 		$version = $summary['version'] ? $summary['version'] : 'dev';
 		Console::comment( 'WPMoo Version ' . $version );
+		// Also surface the CLI package version if available.
+		Console::comment( '→ CLI version: ' . Version::current() );
 		Console::line();
 		$wp_cli = $summary['wp_cli_version'] ? $summary['wp_cli_version'] : 'not detected';
 		Console::comment( '→ WP-CLI version: ' . $wp_cli );
