@@ -5,7 +5,7 @@
  * Tries Composer's InstalledVersions API first; falls back to a dev marker.
  *
  * @package WPMoo\CLI
- * @since x.x.x
+ * @since 0.1.0
  */
 
 namespace WPMoo\CLI\Support;

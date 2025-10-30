@@ -7,7 +7,7 @@
  * the WordPress installation root when `--path`/`WP_PATH` is not provided.
  *
  * @package WPMoo\CLI
- * @since x.x.x
+ * @since 0.1.0
  * @link  https://wpmoo.org WPMoo – WordPress Micro Object-Oriented Framework.
  * @link  https://github.com/wpmoo/wpmoo GitHub Repository.
  * @license GPL-3.0-or-later
