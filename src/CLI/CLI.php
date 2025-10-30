@@ -21,16 +21,16 @@ class CLI extends Base {
 
 	public function __construct() {
 		$this->commands = array(
-			'info'    => new InfoCommand(),
-			'update'  => new UpdateCommand(),
-			'version' => new VersionCommand(),
-			'dist'    => new DistCommand(),
-			'check'   => new CheckCommand(),
-			'wp-check'=> new PluginCheckCommand(),
-			'build'   => new BuildCommand(),
-			'deploy'  => new DeployCommand(),
-			'release' => new ReleaseCommand(),
-			'rename'  => new RenameCommand(),
+			'info'     => new InfoCommand(),
+			'update'   => new UpdateCommand(),
+			'version'  => new VersionCommand(),
+			'dist'     => new DistCommand(),
+			'check'    => new CheckCommand(),
+			'wp-check' => new PluginCheckCommand(),
+			'build'    => new BuildCommand(),
+			'deploy'   => new DeployCommand(),
+			'release'  => new ReleaseCommand(),
+			'rename'   => new RenameCommand(),
 		);
 	}
 
@@ -64,16 +64,16 @@ class CLI extends Base {
 
 	protected function definitions() {
 		return array(
-			'info'    => 'Show framework info',
-			'update'  => 'Run maintenance tasks (translations, etc.)',
-			'version' => 'Bump framework version across manifests',
-			'build'   => 'Build front-end assets',
-			'deploy'  => 'Create a deployable copy (optionally zipped)',
-			'dist'    => 'Produce a distributable archive',
-			'check'   => 'Composer validate, PHPCBF, PHPCS, PHPStan, PHPUnit',
-			'wp-check'=> 'Run WordPress Plugin Check and pretty-print results',
-			'release' => 'Run release flow (version, update, build, package)',
-			'rename'  => 'Rename starter plugin (name/slug/namespace)',
+			'info'     => 'Show framework info',
+			'update'   => 'Run maintenance tasks (translations, etc.)',
+			'version'  => 'Bump framework version across manifests',
+			'build'    => 'Build front-end assets',
+			'deploy'   => 'Create a deployable copy (optionally zipped)',
+			'dist'     => 'Produce a distributable archive',
+			'check'    => 'Composer validate, PHPCBF, PHPCS, PHPStan, PHPUnit',
+			'wp-check' => 'Run WordPress Plugin Check and pretty-print results',
+			'release'  => 'Run release flow (version, update, build, package)',
+			'rename'   => 'Rename starter plugin (name/slug/namespace)',
 		);
 	}
 
