@@ -4,9 +4,28 @@ namespace WPMoo\CLI\Commands;
 
 use WPMoo\CLI\Contracts\CommandInterface;
 use WPMoo\CLI\Console;
+use WPMoo\CLI\Support\Base;
 
+/**
+ * Release command to run the complete release flow.
+ *
+ * @package WPMoo\CLI\Commands
+ */
 class ReleaseCommand implements CommandInterface {
 	public function handle( array $args = array() ) {
+		// Check if release is allowed in current context.
+		$config = Base::get_context_config_static();
+		if ( ! $config['allow_deploy_dist'] ) {
+			Console::error( 'Release commands are not allowed in this context.' );
+			Console::line();
+			Console::comment( 'Current context: ' . $config['message'] );
+			if ( isset( $config['name'] ) ) {
+				Console::comment( 'Project name: ' . $config['name'] );
+			}
+			Console::line();
+			return 1;
+		}
+
 		// Options.
 		$opts = $this->parseOptions( $args );
 

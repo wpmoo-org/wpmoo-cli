@@ -186,6 +186,140 @@ class Base {
 	}
 
 	/**
+	 * Detect the execution context based on composer.json.
+	 *
+	 * @return string Context type: 'cli', 'framework', 'plugin', or 'other'
+	 */
+	protected function detect_context() {
+		$composer_path = self::base_path() . 'composer.json';
+		if ( ! file_exists( $composer_path ) ) {
+			return 'other';
+		}
+
+		$raw = @file_get_contents( $composer_path );
+		if ( false === $raw ) {
+			return 'other';
+		}
+
+		$data = json_decode( $raw, true );
+		if ( ! is_array( $data ) ) {
+			return 'other';
+		}
+
+		$package_name = isset( $data['name'] ) ? $data['name'] : null;
+
+		if ( $package_name === 'wpmoo/wpmoo-cli' ) {
+			return 'cli';
+		} elseif ( $package_name === 'wpmoo/wpmoo' ) {
+			return 'framework';
+		}
+
+		// Check if the project requires wpmoo/wpmoo as a dependency.
+		$requires_wpmoo = false;
+		$dep_types      = array( 'require', 'require-dev' );
+		foreach ( $dep_types as $dep_type ) {
+			if ( isset( $data[ $dep_type ] ) && is_array( $data[ $dep_type ] ) && isset( $data[ $dep_type ]['wpmoo/wpmoo'] ) ) {
+				$requires_wpmoo = true;
+				break;
+			}
+		}
+
+		if ( $requires_wpmoo ) {
+			return 'plugin'; // A project using WPMoo framework as dependency.
+		}
+
+		return 'other';
+	}
+
+	/**
+	 * Get context-specific behavior configuration.
+	 *
+	 * @return array<string, mixed>
+	 */
+	protected function get_context_config() {
+		$context = $this->detect_context();
+		$config  = array(
+			'context' => $context,
+			'name'    => $this->get_project_name(),
+		);
+
+		switch ( $context ) {
+			case 'cli':
+				$config['message']              = 'WPMoo CLI - This tool is designed for WPMoo framework and WPMoo-based plugins only.';
+				$config['allow_info']           = true;
+				$config['allow_version']        = true;
+				$config['allow_check']          = true;
+				$config['allow_basic_commands'] = true;
+				$config['allow_deploy_dist']    = false; // Don't allow deployment/dist from CLI directory.
+				break;
+
+			case 'framework':
+				$config['message']           = 'WPMoo Framework - Running in WPMoo framework directory.';
+				$config['allow_info']        = true;
+				$config['allow_version']     = true;
+				$config['allow_check']       = true;
+				$config['allow_deploy_dist'] = true;
+				$config['is_framework']      = true;
+				break;
+
+			case 'plugin':
+				$config['message']           = 'WPMoo-Based Plugin - Running in WPMoo-based plugin directory.';
+				$config['allow_info']        = true;
+				$config['allow_version']     = true;
+				$config['allow_check']       = true;
+				$config['allow_deploy_dist'] = true;
+				$config['is_plugin']         = true;
+				break;
+
+			default:
+				$config['message']           = 'Unknown Project - This tool is designed for WPMoo framework and WPMoo-based plugins.';
+				$config['allow_info']        = true;
+				$config['allow_version']     = true;
+				$config['allow_check']       = true;
+				$config['allow_deploy_dist'] = false;
+				$config['is_supported']      = false;
+				break;
+		}
+
+		return $config;
+	}
+
+	/**
+	 * Get project name from composer.json.
+	 *
+	 * @return string|null
+	 */
+	protected function get_project_name() {
+		$composer_path = self::base_path() . 'composer.json';
+		if ( ! file_exists( $composer_path ) ) {
+			return null;
+		}
+
+		$raw = @file_get_contents( $composer_path );
+		if ( false === $raw ) {
+			return null;
+		}
+
+		$data = json_decode( $raw, true );
+		if ( ! is_array( $data ) || ! isset( $data['name'] ) ) {
+			return null;
+		}
+
+		return $data['name'];
+	}
+
+	/**
+	 * Public static method to get context configuration from anywhere.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function get_context_config_static() {
+		// Create an instance of Base class to access context detection methods.
+		$base = new self();
+		return $base->get_context_config();
+	}
+
+	/**
 	 * Compare two paths ignoring trailing separators.
 	 *
 	 * @param string $a Path A.

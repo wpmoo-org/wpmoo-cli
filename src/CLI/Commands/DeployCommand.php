@@ -6,8 +6,26 @@ use WPMoo\CLI\Contracts\CommandInterface;
 use WPMoo\CLI\Support\Base;
 use WPMoo\CLI\Console;
 
+/**
+ * Deploy command to create deployable copies of plugins.
+ *
+ * @package WPMoo\CLI\Commands
+ */
 class DeployCommand extends Base implements CommandInterface {
 	public function handle( array $args = array() ) {
+		// Check if deployment is allowed in current context.
+		$config = self::get_context_config_static();
+		if ( ! $config['allow_deploy_dist'] ) {
+			Console::error( 'Deployment commands are not allowed in this context.' );
+			Console::line();
+			Console::comment( 'Current context: ' . $config['message'] );
+			if ( isset( $config['name'] ) ) {
+				Console::comment( 'Project name: ' . $config['name'] );
+			}
+			Console::line();
+			return 1;
+		}
+
 		$options = $this->parse_deploy_options( $args );
 		$base    = self::base_path();
 		$slug    = $this->plugin_slug();

@@ -114,7 +114,8 @@ class CLI extends Base {
 	 * @return array<string, string> Map of command => description.
 	 */
 	protected function definitions() {
-		return array(
+		$config   = $this->context_config();
+		$commands = array(
 			'info'     => 'Show framework info',
 			'update'   => 'Run maintenance tasks (translations, etc.)',
 			'version'  => 'Bump framework version across manifests',
@@ -126,32 +127,64 @@ class CLI extends Base {
 			'release'  => 'Run release flow (version, update, build, package)',
 			'rename'   => 'Rename starter plugin (name/slug/namespace)',
 		);
+
+		// Conditionally hide commands based on context.
+		if ( ! $config['allow_deploy_dist'] ) {
+			unset( $commands['deploy'] );
+			unset( $commands['dist'] );
+			unset( $commands['release'] );
+			unset( $commands['rename'] );
+			// Add explanation for unsupported contexts.
+			$commands['context-info'] = 'Show current execution context';
+		}
+
+		return $commands;
 	}
 
 	/**
-	 * Render banner and environment summary.
+	 * Get context configuration.
+	 *
+	 * @return array<string, mixed>
+	 */
+	protected function context_config() {
+		return \WPMoo\CLI\Support\Base::get_context_config_static();
+	}
+
+	/**
+	 * Render context-specific welcome message.
 	 *
 	 * @return void
 	 */
 	protected function renderWelcome() {
-		$summary = $this->environmentSummary();
+		$context_config = $this->context_config();
+		$summary        = $this->environmentSummary();
+
 		Console::line();
 		foreach ( $this->logoLines() as $line ) {
 			Console::banner( $line );
 		}
+
 		$version = $summary['version'] ? $summary['version'] : 'dev';
 		Console::comment( 'WPMoo Version ' . $version );
 		// Also surface the CLI package version if available.
-		Console::comment( '→ CLI version: ' . Version::current() );
+		Console::comment( '→ CLI version: ' . \WPMoo\CLI\Support\Version::current() );
 		Console::line();
-		$wp_cli = $summary['wp_cli_version'] ? $summary['wp_cli_version'] : 'not detected';
-		Console::comment( '→ WP-CLI version: ' . $wp_cli );
-		Console::comment( sprintf( '→ Current Plugin File, Name, Namespace: \'%s\', \'%s\', \'%s\'', $summary['plugin_file'] ? $summary['plugin_file'] : 'n/a', $summary['plugin_name'] ? $summary['plugin_name'] : 'n/a', $summary['plugin_namespace'] ? $summary['plugin_namespace'] : 'n/a' ) );
-		if ( $summary['plugin_version'] ) {
-			Console::comment( '→ Plugin version: ' . $summary['plugin_version'] );
+
+		// Show context-specific message.
+		Console::comment( $context_config['message'] );
+
+		if ( $context_config['context'] !== 'cli' || $context_config['allow_deploy_dist'] ) {
+			$wp_cli = $summary['wp_cli_version'] ? $summary['wp_cli_version'] : 'not detected';
+			Console::comment( '→ WP-CLI version: ' . $wp_cli );
+			Console::comment( sprintf( '→ Current Plugin File, Name, Namespace: \'%s\', \'%s\', \'%s\'', $summary['plugin_file'] ? $summary['plugin_file'] : 'n/a', $summary['plugin_name'] ? $summary['plugin_name'] : 'n/a', $summary['plugin_namespace'] ? $summary['plugin_namespace'] : 'n/a' ) );
+			if ( $summary['plugin_version'] ) {
+				Console::comment( '→ Plugin version: ' . $summary['plugin_version'] );
+			}
 		}
+
 		Console::line();
 	}
+
 
 	/**
 	 * Collect a shallow environment summary for the banner.

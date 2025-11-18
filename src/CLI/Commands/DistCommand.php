@@ -6,8 +6,26 @@ use WPMoo\CLI\Contracts\CommandInterface;
 use WPMoo\CLI\Support\Base;
 use WPMoo\CLI\Console;
 
+/**
+ * Dist command to create distribution archives.
+ *
+ * @package WPMoo\CLI\Commands
+ */
 class DistCommand extends Base implements CommandInterface {
 	public function handle( array $args = array() ) {
+		// Check if dist is allowed in current context.
+		$config = self::get_context_config_static();
+		if ( ! $config['allow_deploy_dist'] ) {
+			Console::error( 'Distribution commands are not allowed in this context.' );
+			Console::line();
+			Console::comment( 'Current context: ' . $config['message'] );
+			if ( isset( $config['name'] ) ) {
+				Console::comment( 'Project name: ' . $config['name'] );
+			}
+			Console::line();
+			return 1;
+		}
+
 		$options     = $this->parse_dist_options( $args );
 		$source_root = $options['source'] ? $this->normalize_absolute_path( $options['source'] ) : $this->default_dist_source();
 		if ( ! $source_root || ! is_dir( $source_root ) ) {

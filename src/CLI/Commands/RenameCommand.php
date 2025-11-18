@@ -6,8 +6,26 @@ use WPMoo\CLI\Contracts\CommandInterface;
 use WPMoo\CLI\Support\Base;
 use WPMoo\CLI\Console;
 
+/**
+ * Rename command to rename plugins and update relevant files.
+ *
+ * @package WPMoo\CLI\Commands
+ */
 class RenameCommand extends Base implements CommandInterface {
 	public function handle( array $args = array() ) {
+		// Check if rename is allowed in current context.
+		$config = self::get_context_config_static();
+		if ( ! $config['allow_deploy_dist'] ) {
+			Console::error( 'Rename commands are not allowed in this context.' );
+			Console::line();
+			Console::comment( 'Current context: ' . $config['message'] );
+			if ( isset( $config['name'] ) ) {
+				Console::comment( 'Project name: ' . $config['name'] );
+			}
+			Console::line();
+			return 1;
+		}
+
 		$base_path = self::base_path();
 
 		$opts  = $this->parseArgs( $args );
