@@ -1,9 +1,23 @@
 <?php
+/**
+ * Check command for the WPMoo CLI.
+ *
+ * Runs project validation checks including composer validate, PHPCBF, PHPCS, PHPStan, and PHPUnit.
+ *
+ * @package WPMoo\CLI\Commands
+ * @since 0.1.0
+ * @link  https://wpmoo.org WPMoo – WordPress Micro Object-Oriented Framework.
+ * @link  https://github.com/wpmoo/wpmoo GitHub Repository.
+ * @license https://spdx.org/licenses/GPL-2.0-or-later.html GPL-2.0-or-later
+ */
 
 namespace WPMoo\CLI\Commands;
 
 use WPMoo\CLI\Console;
 
+/**
+ * Check command to run project validation checks.
+ */
 class CheckCommand {
 	/**
 	 * Run local project checks: composer validate, PHPCBF, PHPCS, PHPStan, PHPUnit.

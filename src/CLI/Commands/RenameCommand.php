@@ -15,7 +15,7 @@ class RenameCommand extends Base implements CommandInterface {
 	public function handle( array $args = array() ) {
 		// Check if rename is allowed in current context.
 		$config = self::get_context_config_static();
-		if ( ! $config['allow_deploy_dist'] ) {
+		if ( ! $config['allow_rename'] ) {
 			Console::error( 'Rename commands are not allowed in this context.' );
 			Console::line();
 			Console::comment( 'Current context: ' . $config['message'] );

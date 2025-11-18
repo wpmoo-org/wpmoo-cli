@@ -1,4 +1,15 @@
 <?php
+/**
+ * Base support class for WPMoo CLI commands.
+ *
+ * Provides common utilities for CLI commands without hard dependencies on the framework.
+ *
+ * @package WPMoo\CLI\Support
+ * @since 0.1.0
+ * @link  https://wpmoo.org WPMoo – WordPress Micro Object-Oriented Framework.
+ * @link  https://github.com/wpmoo/wpmoo GitHub Repository.
+ * @license https://spdx.org/licenses/GPL-2.0-or-later.html GPL-2.0-or-later
+ */
 
 namespace WPMoo\CLI\Support;
 
@@ -258,7 +269,8 @@ class Base {
 				$config['allow_info']        = true;
 				$config['allow_version']     = true;
 				$config['allow_check']       = true;
-				$config['allow_deploy_dist'] = true;
+				$config['allow_deploy_dist'] = true; // Allow dist for framework distribution builds.
+				$config['allow_rename']      = false; // Don't allow renaming the framework itself.
 				$config['is_framework']      = true;
 				break;
 
@@ -268,6 +280,7 @@ class Base {
 				$config['allow_version']     = true;
 				$config['allow_check']       = true;
 				$config['allow_deploy_dist'] = true;
+				$config['allow_rename']      = true; // Allow renaming WPMoo-based plugins.
 				$config['is_plugin']         = true;
 				break;
 

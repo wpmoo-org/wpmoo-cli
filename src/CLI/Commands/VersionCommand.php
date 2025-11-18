@@ -1,4 +1,15 @@
 <?php
+/**
+ * Version command for the WPMoo CLI.
+ *
+ * Updates project version across relevant files (plugin header, readme.txt, etc.).
+ *
+ * @package WPMoo\CLI\Commands
+ * @since 0.1.0
+ * @link  https://wpmoo.org WPMoo – WordPress Micro Object-Oriented Framework.
+ * @link  https://github.com/wpmoo/wpmoo GitHub Repository.
+ * @license https://spdx.org/licenses/GPL-2.0-or-later.html GPL-2.0-or-later
+ */
 
 namespace WPMoo\CLI\Commands;
 
@@ -6,7 +17,16 @@ use WPMoo\CLI\Contracts\CommandInterface;
 use WPMoo\CLI\Support\Base;
 use WPMoo\CLI\Console;
 
+/**
+ * Version command to update project version across manifests.
+ */
 class VersionCommand extends Base implements CommandInterface {
+	/**
+	 * Handle the version command.
+	 *
+	 * @param array<int, mixed> $args Command arguments.
+	 * @return int Exit status (0 for success, non-zero for failure).
+	 */
 	public function handle( array $args = array() ) {
 		$base            = self::base_path();
 		$current_version = $this->detect_current_version( $base );

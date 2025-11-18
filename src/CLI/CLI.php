@@ -133,9 +133,13 @@ class CLI extends Base {
 			unset( $commands['deploy'] );
 			unset( $commands['dist'] );
 			unset( $commands['release'] );
-			unset( $commands['rename'] );
 			// Add explanation for unsupported contexts.
 			$commands['context-info'] = 'Show current execution context';
+		}
+
+		// Hide rename command if not allowed in current context.
+		if ( ! $config['allow_rename'] ) {
+			unset( $commands['rename'] );
 		}
 
 		return $commands;
