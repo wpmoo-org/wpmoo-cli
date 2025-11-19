@@ -154,7 +154,7 @@ class Base {
 	 * @param string $base_path Base path with trailing separator.
 	 * @return string|null
 	 */
-	protected function detect_current_version( $base_path ) {
+	protected function detect_composer_version( $base_path ) {
 		$composer = rtrim( $base_path, '/\\' ) . DIRECTORY_SEPARATOR . 'composer.json';
 		if ( file_exists( $composer ) ) {
 			$raw = @file_get_contents( $composer );
@@ -166,6 +166,142 @@ class Base {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Read version from readme.txt Stable tag.
+	 *
+	 * @param string $base_path Base path with trailing separator.
+	 * @return string|null
+	 */
+	protected function detect_readme_version( $base_path ) {
+		// Check readme.txt in root directory.
+		$readme = rtrim( $base_path, '/\\' ) . DIRECTORY_SEPARATOR . 'readme.txt';
+		if ( file_exists( $readme ) ) {
+			$contents = @file_get_contents( $readme );
+			if ( false !== $contents ) {
+				// Look for Stable tag: X.X.X pattern.
+				if ( preg_match( '/^Stable tag:\s*(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?)/mi', $contents, $matches ) ) {
+					return trim( $matches[1] );
+				}
+			}
+		}
+
+		// Also check readme.txt in src directory.
+		$src_readme = rtrim( $base_path, '/\\' ) . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'readme.txt';
+		if ( file_exists( $src_readme ) ) {
+			$contents = @file_get_contents( $src_readme );
+			if ( false !== $contents ) {
+				// Look for Stable tag: X.X.X pattern.
+				if ( preg_match( '/^Stable tag:\s*(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?)/mi', $contents, $matches ) ) {
+					return trim( $matches[1] );
+				}
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Read version from plugin file headers.
+	 *
+	 * @param string $base_path Base path with trailing separator.
+	 * @return string|null
+	 */
+	protected function detect_plugin_header_version( $base_path ) {
+		// Try to find the main plugin file (with plugin header).
+		$files = glob( rtrim( $base_path, '/\\' ) . DIRECTORY_SEPARATOR . '*.php' );
+		if ( ! is_array( $files ) ) {
+			return null;
+		}
+
+		foreach ( $files as $file ) {
+			if ( $this->is_plugin_file_with_header( $file ) ) {
+				$version = $this->get_version_from_plugin_file( $file );
+				if ( $version ) {
+					return $version;
+				}
+			}
+		}
+
+		// Also check in src directory.
+		$src_files = glob( rtrim( $base_path, '/\\' ) . DIRECTORY_SEPARATOR . 'src/*.php' );
+		if ( is_array( $src_files ) ) {
+			foreach ( $src_files as $file ) {
+				if ( $this->is_plugin_file_with_header( $file ) ) {
+					$version = $this->get_version_from_plugin_file( $file );
+					if ( $version ) {
+						return $version;
+					}
+				}
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Check if a file contains a WordPress plugin header.
+	 *
+	 * @param string $file_path Path to the PHP file.
+	 * @return bool True if file has WordPress plugin headers.
+	 */
+	private function is_plugin_file_with_header( $file_path ) {
+		if ( ! file_exists( $file_path ) ) {
+			return false;
+		}
+
+		$contents = @file_get_contents( $file_path );
+		if ( false === $contents ) {
+			return false;
+		}
+
+		// Check for the pattern that indicates a plugin header.
+		return (bool) preg_match( '/^[ \t\/*#@]*Plugin Name:/mi', $contents );
+	}
+
+	/**
+	 * Extract version from a WordPress plugin file header.
+	 *
+	 * @param string $file_path Path to the plugin file.
+	 * @return string|null Version string if found.
+	 */
+	private function get_version_from_plugin_file( $file_path ) {
+		$contents = @file_get_contents( $file_path );
+		if ( false === $contents ) {
+			return null;
+		}
+
+		// Look for Version: X.X.X pattern in plugin header.
+		if ( preg_match( '/^[ \t\/*#@]*Version:\s*(\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?)/mi', $contents, $matches ) ) {
+			return trim( $matches[1] );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Detect current version from multiple sources in order of preference:
+	 * composer.json, readme.txt (Stable tag), plugin file header.
+	 *
+	 * @param string $base_path Base path with trailing separator.
+	 * @return string|null
+	 */
+	protected function detect_current_version( $base_path ) {
+		// Try composer.json first.
+		$version = $this->detect_composer_version( $base_path );
+		if ( null !== $version ) {
+			return $version;
+		}
+
+		// Then try readme.txt.
+		$version = $this->detect_readme_version( $base_path );
+		if ( null !== $version ) {
+			return $version;
+		}
+
+		// Finally try plugin file header.
+		return $this->detect_plugin_header_version( $base_path );
 	}
 
 	/**
@@ -268,7 +404,7 @@ class Base {
 			case 'framework':
 				$config['message']           = 'WPMoo Framework - Running in WPMoo framework directory.';
 				$config['allow_info']        = true;
-				$config['allow_version']     = true;
+				$config['allow_version']     = true; // Allow version command for framework development.
 				$config['allow_check']       = true;
 				$config['allow_deploy_dist'] = true; // Allow dist for framework distribution builds.
 				$config['allow_rename']      = false; // Don't allow renaming the framework itself.
@@ -1217,10 +1353,25 @@ class Base {
 				$updated[] = $readme;
 			} else {
 				$raw      = file_get_contents( $readme );
-				$replaced = is_string( $raw ) ? preg_replace( '/^(Stable tag:\s*)(.*)$/mi', '$1' . $new_version, $raw ) : null;
+				$replaced = is_string( $raw ) ? preg_replace( '/^(Stable tag:\s*)([^\r\n]*)\r?\n?$/mi', '${1}' . $new_version, $raw ) : null;
 				if ( is_string( $replaced ) && $replaced !== $raw ) {
 					file_put_contents( $readme, $replaced );
 					$updated[] = $readme;
+				}
+			}
+		}
+
+		// Update readme Stable tag if present in src directory.
+		$src_readme = rtrim( (string) $base_path, '/\\' ) . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'readme.txt';
+		if ( file_exists( $src_readme ) ) {
+			if ( $dry_run ) {
+				$updated[] = $src_readme;
+			} else {
+				$raw      = file_get_contents( $src_readme );
+				$replaced = is_string( $raw ) ? preg_replace( '/^(Stable tag:\s*)([^\r\n]*)\r?\n?$/mi', '${1}' . $new_version, $raw ) : null;
+				if ( is_string( $replaced ) && $replaced !== $raw ) {
+					file_put_contents( $src_readme, $replaced );
+					$updated[] = $src_readme;
 				}
 			}
 		}
