@@ -44,9 +44,16 @@ class VersionCommand extends Base implements CommandInterface {
 		$base            = self::base_path();
 		$current_version = $this->detect_current_version( $base );
 		if ( ! $current_version ) {
-			Console::error( 'Could not determine current version from composer.json.' );
+			Console::error( 'Could not determine current version from composer.json, readme.txt, or plugin file.' );
 			return 1; }
-		$options           = $this->parse_version_arguments( $args );
+
+		$options = $this->parse_version_arguments( $args );
+
+		// If no explicit version or bump type specified, run interactive mode.
+		if ( ! $options['explicit'] && ! $options['bump'] ) {
+			return $this->run_interactive_mode( $current_version, $base );
+		}
+
 		$requested_version = null;
 		if ( $options['explicit'] ) {
 			$requested_version = $this->sanitize_version_input( $options['explicit'] );
@@ -85,6 +92,127 @@ class VersionCommand extends Base implements CommandInterface {
 					'options' => $options,
 				)
 			);
+		Console::line();
+		return 0;
+	}
+
+	/**
+	 * Run the version command in interactive mode.
+	 *
+	 * @param string $current_version Current version.
+	 * @param string $base_path Base path.
+	 * @return int Exit status.
+	 */
+	private function run_interactive_mode( $current_version, $base_path ) {
+		Console::line();
+		Console::info( 'Welcome to Version Updater!' );
+		Console::line();
+		Console::comment( 'Current version: ' . $current_version );
+		Console::line();
+
+		// Calculate possible new versions.
+		$major_version = $this->bump_semver( $current_version, 'major' );
+		$minor_version = $this->bump_semver( $current_version, 'minor' );
+		$patch_version = $this->bump_semver( $current_version, 'patch' );
+
+		Console::comment( 'Select the type of version bump:' );
+		Console::line( '  1) Patch: ' . $current_version . ' → ' . $patch_version . ' (patches and small fixes)' );
+		Console::line( '  2) Minor: ' . $current_version . ' → ' . $minor_version . ' (new features, backward compatible)' );
+		Console::line( '  3) Major: ' . $current_version . ' → ' . $major_version . ' (breaking changes)' );
+		Console::line( '  4) Enter custom version' );
+		Console::line();
+
+		// Get user input.
+		$handle = fopen( 'php://stdin', 'r' );
+		Console::comment( 'Choose an option (1-4): ' );
+		$input = trim( fgets( $handle ) );
+
+		$selected_version = null;
+
+		switch ( $input ) {
+			case '1':
+				$selected_version = $patch_version;
+				break;
+			case '2':
+				$selected_version = $minor_version;
+				break;
+			case '3':
+				$selected_version = $major_version;
+				break;
+			case '4':
+				Console::comment( 'Enter new version (e.g., 1.2.3): ' );
+				$custom_version = trim( fgets( $handle ) );
+
+				if ( ! $this->is_valid_semver( $custom_version ) ) {
+					fclose( $handle );
+					Console::error( 'Invalid version format. Expected semantic version x.y.z.' );
+					return 1;
+				}
+				$selected_version = $custom_version;
+				break;
+			default:
+				fclose( $handle );
+				Console::error( 'Invalid option selected. Please choose 1, 2, 3, or 4.' );
+				return 1;
+		}
+
+		// Confirm the change.
+		Console::line();
+		Console::warning( 'You are about to update from ' . $current_version . ' to ' . $selected_version );
+		Console::comment( 'Continue? (y/N): ' );
+		$handle_confirm = fopen( 'php://stdin', 'r' );
+		$confirmation   = trim( strtolower( fgets( $handle_confirm ) ) );
+		fclose( $handle_confirm );
+
+		if ( ! in_array( $confirmation, array( 'y', 'yes', '1' ), true ) ) {
+			Console::info( 'Operation cancelled.' );
+			return 0;
+		}
+
+		return $this->update_to_version( $current_version, $selected_version, $base_path, false );
+	}
+
+	/**
+	 * Update to specified version.
+	 *
+	 * @param string $current_version Current version.
+	 * @param string $new_version New version to update to.
+	 * @param string $base_path Base path.
+	 * @param bool $dry_run Dry run flag.
+	 * @return int Exit status.
+	 */
+	private function update_to_version( $current_version, $new_version, $base_path, $dry_run ) {
+		Console::line();
+		Console::comment( 'Updating WPMoo version: ' . $current_version . ' → ' . $new_version );
+
+		$updated_files = $this->update_version_files( $base_path, $current_version, $new_version, $dry_run );
+
+		if ( empty( $updated_files ) ) {
+			Console::warning( 'No files required updating. Verify project structure.' );
+		} else {
+			foreach ( $updated_files as $file ) {
+				Console::line( ( $dry_run ? '[dry-run] ' : '' ) . '   • ' . $this->relative_path( $file ) );
+			}
+		}
+
+		if ( $dry_run ) {
+			Console::info( 'Dry run completed. No files were modified.' );
+			Console::line();
+			return 0;
+		}
+
+		Console::info( 'Version updated successfully to ' . $new_version );
+
+		$this->do_action_safe(
+			'wpmoo_cli_version_completed',
+			$current_version,
+			$new_version,
+			array(
+				'files'   => $updated_files,
+				'options' => array( 'dry-run' => $dry_run ),
+			)
+		);
+
 		Console::line();
 		return 0;
 	}
