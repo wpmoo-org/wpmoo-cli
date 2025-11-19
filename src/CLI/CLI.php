@@ -147,6 +147,11 @@ class CLI extends Base {
 			unset( $commands['update'] );
 		}
 
+		// Hide version command if not allowed in current context.
+		if ( ! $config['allow_version'] ) {
+			unset( $commands['version'] );
+		}
+
 		return $commands;
 	}
 

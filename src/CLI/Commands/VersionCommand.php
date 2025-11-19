@@ -28,6 +28,19 @@ class VersionCommand extends Base implements CommandInterface {
 	 * @return int Exit status (0 for success, non-zero for failure).
 	 */
 	public function handle( array $args = array() ) {
+		// Check if version is allowed in current context.
+		$config = self::get_context_config_static();
+		if ( ! $config['allow_version'] ) {
+			Console::error( 'Version command is not allowed in this context.' );
+			Console::line();
+			Console::comment( 'Current context: ' . $config['message'] );
+			if ( isset( $config['name'] ) ) {
+				Console::comment( 'Project name: ' . $config['name'] );
+			}
+			Console::line();
+			return 1;
+		}
+
 		$base            = self::base_path();
 		$current_version = $this->detect_current_version( $base );
 		if ( ! $current_version ) {
