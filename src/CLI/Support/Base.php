@@ -258,7 +258,7 @@ class Base {
 			case 'cli':
 				$config['message']              = 'WPMoo CLI - This tool is designed for WPMoo framework and WPMoo-based plugins only.';
 				$config['allow_info']           = true;
-				$config['allow_version']        = true;
+				$config['allow_version']        = true; // Allow version command for CLI tool development.
 				$config['allow_check']          = true;
 				$config['allow_basic_commands'] = true;
 				$config['allow_deploy_dist']    = false; // Don't allow deployment/dist from CLI directory.

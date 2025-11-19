@@ -144,6 +144,7 @@ class CLI extends Base {
 		if ( $config['context'] === 'cli' ) {
 			unset( $commands['build'] );
 			unset( $commands['wp-check'] );
+			unset( $commands['update'] );
 		}
 
 		return $commands;
