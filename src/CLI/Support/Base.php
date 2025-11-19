@@ -102,6 +102,24 @@ class Base {
 			}
 		}
 
+		// Also check src directory for plugin files.
+		if ( ! $metadata['main'] ) {
+			$src_dir = $path . DIRECTORY_SEPARATOR . 'src';
+			if ( is_dir( $src_dir ) ) {
+				foreach ( glob( $src_dir . DIRECTORY_SEPARATOR . '*.php' ) as $file ) {
+					$contents = @file_get_contents( $file );
+					if ( false === $contents ) {
+						continue;
+					}
+					if ( preg_match( '/^[ \t\/*#@]*Plugin Name:\s*(.*)$/mi', $contents ) ) {
+						$metadata['main'] = $file;
+						$metadata['slug'] = basename( $file, '.php' );
+						break;
+					}
+				}
+			}
+		}
+
 		$composer = rtrim( $path, '/\\' ) . DIRECTORY_SEPARATOR . 'composer.json';
 		if ( file_exists( $composer ) ) {
 			$raw = @file_get_contents( $composer );
@@ -1336,9 +1354,9 @@ class Base {
 			$contents = file_get_contents( $meta['main'] );
 			if ( is_string( $contents ) ) {
 				// Update plugin header Version: x.y.z.
-				$replaced = preg_replace( '/^([ \t\/*#@]*Version:\s*)(.*)$/mi', '$1' . $new_version, $contents );
-				// Update a common VERSION constant if present in the main file.
-				$replaced = is_string( $replaced ) ? preg_replace( "/define\(\s*'[^']*_VERSION'\s*,\s*'[^']*'\s*\)\s*;/", "define( 'WPMOO_VERSION', '" . $new_version . "' );", $replaced ) : $replaced; // phpcs:ignore Generic.Files.LineLength
+				$replaced = preg_replace( '/^([ \t\/*#@]*Version:\s*)([^\r\n]*)\r?\n?$/mi', '${1}' . $new_version, $contents );
+				// Update the WPMOO_VERSION constant if present in the main file.
+				$replaced = is_string( $replaced ) ? preg_replace( "/define\(\s*'WPMOO_VERSION'\s*,\s*'[^']*'\s*\)\s*;/", "define( 'WPMOO_VERSION', '" . $new_version . "' );", $replaced ) : $replaced; // phpcs:ignore Generic.Files.LineLength
 				if ( is_string( $replaced ) && $replaced !== $contents ) {
 					file_put_contents( $meta['main'], $replaced );
 					$updated[] = $meta['main'];
