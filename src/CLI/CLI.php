@@ -133,13 +133,17 @@ class CLI extends Base {
 			unset( $commands['deploy'] );
 			unset( $commands['dist'] );
 			unset( $commands['release'] );
-			// Add explanation for unsupported contexts.
-			$commands['context-info'] = 'Show current execution context';
 		}
 
 		// Hide rename command if not allowed in current context.
 		if ( ! $config['allow_rename'] ) {
 			unset( $commands['rename'] );
+		}
+
+		// Hide build and wp-check commands in CLI directory context.
+		if ( $config['context'] === 'cli' ) {
+			unset( $commands['build'] );
+			unset( $commands['wp-check'] );
 		}
 
 		return $commands;

@@ -262,6 +262,7 @@ class Base {
 				$config['allow_check']          = true;
 				$config['allow_basic_commands'] = true;
 				$config['allow_deploy_dist']    = false; // Don't allow deployment/dist from CLI directory.
+				$config['allow_rename']         = false; // Don't allow renaming from CLI directory.
 				break;
 
 			case 'framework':
@@ -290,6 +291,7 @@ class Base {
 				$config['allow_version']     = true;
 				$config['allow_check']       = true;
 				$config['allow_deploy_dist'] = false;
+				$config['allow_rename']      = false; // Don't allow renaming in unsupported projects.
 				$config['is_supported']      = false;
 				break;
 		}
