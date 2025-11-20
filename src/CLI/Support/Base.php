@@ -1281,6 +1281,7 @@ class Base {
 			'--major' => 'major',
 			'--minor' => 'minor',
 			'--patch' => 'patch',
+			'--bump'  => 'interactive', // Special flag to trigger interactive mode.
 		);
 
 		$count = count( $args );
@@ -1289,10 +1290,35 @@ class Base {
 			if ( '' === trim( $arg ) ) {
 				continue;
 			}
-			if ( isset( $map[ $arg ] ) ) {
+			if ( 0 === strpos( $arg, '--bump=' ) ) {
+				// Handle --bump=patch, --bump=minor, --bump=major.
+				$bump_value = substr( $arg, 7 ); // Remove '--bump=' prefix.
+				if ( in_array( $bump_value, array( 'patch', 'minor', 'major' ), true ) ) {
+					$options['bump'] = $bump_value;
+				} else {
+					// Invalid bump type specified, treat as invalid.
+					$options['bump'] = null;
+				}
+				continue;
+			}
+
+			if ( '--bump' === $arg ) {
+				// Just --bump flag, trigger interactive mode.
+				$options['bump'] = 'interactive';
+				continue;
+			}
+
+			if ( '--interactive' === $arg ) {
+				// Alternative flag for interactive mode (works better with Composer).
+				$options['bump'] = 'interactive';
+				continue;
+			}
+
+			if ( isset( $map[ $arg ] ) && '--bump' !== $arg ) { // Exclude --bump from the old mapping since we handle it separately.
 				$options['bump'] = $map[ $arg ];
 				continue;
 			}
+
 			if ( '--dry-run' === $arg ) {
 				$options['dry-run'] = true;
 				continue;

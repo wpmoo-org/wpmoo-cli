@@ -49,8 +49,20 @@ class VersionCommand extends Base implements CommandInterface {
 
 		$options = $this->parse_version_arguments( $args );
 
-		// If no explicit version or bump type specified, run interactive mode.
+		// If no explicit version or bump type specified, just show current version.
 		if ( ! $options['explicit'] && ! $options['bump'] ) {
+			Console::line();
+			Console::info( 'Current version: ' . $current_version );
+			Console::line();
+
+			// Offer interactive mode if user wants to bump version.
+			Console::comment( 'Run with --bump to update version interactively, or specify --bump=[patch|minor|major]' );
+			Console::line();
+			return 0;
+		}
+
+		// If --bump flag is specified without value, run interactive mode.
+		if ( $options['bump'] === true || $options['bump'] === 'interactive' ) {
 			return $this->run_interactive_mode( $current_version, $base );
 		}
 
