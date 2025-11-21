@@ -20,6 +20,7 @@ use WPMoo\CLI\Commands\BuildCommand;
 use WPMoo\CLI\Commands\DeployCommand;
 use WPMoo\CLI\Commands\DistCommand;
 use WPMoo\CLI\Commands\CheckCommand;
+use WPMoo\CLI\Commands\DevCommand;
 use WPMoo\CLI\Commands\InfoCommand;
 use WPMoo\CLI\Commands\UpdateCommand;
 use WPMoo\CLI\Commands\VersionCommand;
@@ -52,6 +53,7 @@ class CLI extends Base {
 			'dist'     => new DistCommand(),
 			'check'    => new CheckCommand(),
 			'wp-check' => new PluginCheckCommand(),
+			'dev'      => new DevCommand(),
 			'build'    => new BuildCommand(),
 			'deploy'   => new DeployCommand(),
 			'release'  => new ReleaseCommand(),
@@ -119,6 +121,7 @@ class CLI extends Base {
 			'info'     => 'Show framework info',
 			'update'   => 'Run maintenance tasks (translations, etc.)',
 			'version'  => 'Bump framework version across manifests',
+			'dev'      => 'Run development environment with watch mode',
 			'build'    => 'Build front-end assets',
 			'deploy'   => 'Create a deployable copy (optionally zipped)',
 			'dist'     => 'Produce a distributable archive',

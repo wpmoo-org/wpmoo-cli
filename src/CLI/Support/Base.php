@@ -1526,4 +1526,111 @@ class Base {
 		}
 		return $value;
 	}
+
+	/**
+	 * Ensure dependencies are installed.
+	 *
+	 * @param array<string, mixed> $options Build options.
+	 * @return array|false Array with manager info and success status, or false if failed.
+	 */
+	protected function ensure_dependencies_installed( array $options ) {
+		$base = $this->base_path();
+		$pkg  = $base . 'package.json';
+		if ( ! file_exists( $pkg ) ) {
+			if ( ! empty( $options['allow-missing'] ) ) {
+				Console::comment( '→ No package.json detected; skipping dependency check.' );
+				return true;
+			}
+			Console::error( 'No package.json detected; cannot run development environment.' );
+			return false;
+		}
+
+		// Check if user wants to be asked for package manager.
+		$ask_user = ! empty( $options['ask-pm'] );
+
+		$manager = null;
+		if ( ! $ask_user ) {
+			$manager = $this->detect_package_manager( $base, $options['pm'] );
+		}
+
+		if ( ! $manager || $ask_user ) {
+			if ( ! $ask_user && $this->detect_package_manager( $base, $options['pm'] ) ) {
+				Console::comment( 'Package manager detected, but asking user for preference.' );
+			} else {
+				Console::comment( 'No package manager detected or user preference required.' );
+			}
+
+			// Ask user which package manager to use.
+			$manager_name = $this->ask_for_package_manager();
+			if ( ! $manager_name ) {
+				Console::error( 'Could not determine package manager.' );
+				return false;
+			}
+
+			$manager = array(
+				'name'   => $manager_name,
+				'binary' => $manager_name,
+			);
+		}
+
+		$name   = (string) $manager['name'];
+		$binary = (string) $manager['binary'];
+		Console::comment( '→ Using ' . $name . ' (' . $binary . ')' );
+
+		// Check if node_modules exists.
+		if ( ! is_dir( $base . 'node_modules' ) || ! empty( $options['force-install'] ) ) {
+			Console::comment( '→ Dependencies not found. Installing.' );
+
+			// Run install command.
+			list( $install_status, $install_output ) = $this->execute_command( $binary, $this->install_arguments( $name ), $base );
+			$this->output_command_lines( $install_output );
+
+			if ( 0 !== $install_status ) {
+				Console::error( 'Dependency installation failed with status ' . $install_status . '.' );
+				return false;
+			}
+
+			Console::info( '→ Dependencies installed successfully.' );
+		} else {
+			Console::comment( '→ Dependencies already installed.' );
+		}
+
+		return array(
+			'manager' => $manager,
+			'success' => true,
+		);
+	}
+
+	/**
+	 * Ask the user which package manager to use.
+	 *
+	 * @return string|null The selected package manager name, or null if invalid.
+	 */
+	private function ask_for_package_manager() {
+		Console::comment( 'Available package managers:' );
+		Console::line( '  1) npm' );
+		Console::line( '  2) yarn' );
+		Console::line( '  3) pnpm' );
+		Console::line( '  4) bun' );
+		Console::line();
+
+		$handle = fopen( 'php://stdin', 'r' );
+		Console::comment( 'Choose a package manager (1-4): ' );
+		$input = trim( fgets( $handle ) );
+		fclose( $handle );
+
+		switch ( $input ) {
+			case '1':
+				return 'npm';
+			case '2':
+				return 'yarn';
+			case '3':
+				return 'pnpm';
+			case '4':
+				return 'bun';
+			default:
+				Console::error( 'Invalid option selected.' );
+				return null;
+		}
+	}
 }
