@@ -33,7 +33,7 @@ class BuildCommand extends Base implements CommandInterface {
 		Console::comment( 'Building assets.' );
 
 		// Ensure dependencies are installed.
-		$install_result = $this->ensure_dependencies_installed( array_merge( $options, array( 'ask-pm' => true ) ) );
+		$install_result = $this->ensure_dependencies_installed( $options );
 		if ( ! $install_result || ! $install_result['success'] ) {
 			Console::error( 'Failed to install dependencies.' );
 			Console::line();

@@ -516,6 +516,7 @@ class Base {
 			'force-install' => false,
 			'skip-install'  => false,
 			'allow-missing' => false,
+			'ask-pm'        => false,
 		);
 
 		foreach ( $args as $arg ) {
@@ -533,6 +534,8 @@ class Base {
 				if ( '' !== $script ) {
 					$options['script'] = $script;
 				}
+			} elseif ( '--ask' === $arg || '--ask-pm' === $arg ) {
+				$options['ask-pm'] = true;
 			}
 		}
 
@@ -1577,6 +1580,21 @@ class Base {
 		$binary = (string) $manager['binary'];
 		Console::comment( '→ Using ' . $name . ' (' . $binary . ')' );
 
+		// Check if dependencies are already installed for this package manager.
+		$lock_file = $this->get_lock_file_for_manager( $base, $name );
+		if ( $lock_file && file_exists( $lock_file ) ) {
+			// Check if node_modules exists and is newer than the lock file.
+			$node_modules_path = $base . 'node_modules';
+			if ( is_dir( $node_modules_path ) && ! empty( $options['force-install'] ) === false &&
+				filemtime( $node_modules_path ) > filemtime( $lock_file ) ) {
+				Console::comment( '→ Dependencies already installed and up to date.' );
+				return array(
+					'manager' => $manager,
+					'success' => true,
+				);
+			}
+		}
+
 		// Check if node_modules exists.
 		if ( ! is_dir( $base . 'node_modules' ) || ! empty( $options['force-install'] ) ) {
 			Console::comment( '→ Dependencies not found. Installing.' );
@@ -1608,29 +1626,71 @@ class Base {
 	 */
 	private function ask_for_package_manager() {
 		Console::comment( 'Available package managers:' );
-		Console::line( '  1) npm' );
+		Console::line( '  1) npm (default)' );
 		Console::line( '  2) yarn' );
 		Console::line( '  3) pnpm' );
 		Console::line( '  4) bun' );
 		Console::line();
 
 		$handle = fopen( 'php://stdin', 'r' );
-		Console::comment( 'Choose a package manager (1-4): ' );
+		Console::comment( 'Choose a package manager (1-4, name, or press Enter for default): ' );
 		$input = trim( fgets( $handle ) );
 		fclose( $handle );
 
+		// If input is empty, use default (npm).
+		if ( '' === $input ) {
+			return 'npm';
+		}
+
+		// Convert input to lowercase for comparison.
+		$input = strtolower( $input );
+
+		// Map various input formats to package managers.
 		switch ( $input ) {
 			case '1':
+			case 'n':
+			case 'npm':
 				return 'npm';
 			case '2':
+			case 'y':
+			case 'yarn':
 				return 'yarn';
 			case '3':
+			case 'p':
+			case 'pnpm':
 				return 'pnpm';
 			case '4':
+			case 'b':
+			case 'bun':
 				return 'bun';
 			default:
 				Console::error( 'Invalid option selected.' );
 				return null;
 		}
+	}
+
+	/**
+	 * Get the lock file path for a specific package manager.
+	 *
+	 * @param string $base Base path.
+	 * @param string $manager Package manager name.
+	 * @return string|null Path to the lock file or null if not found.
+	 */
+	private function get_lock_file_for_manager( $base, $manager ) {
+		$lock_files = array(
+			'npm'  => 'package-lock.json',
+			'yarn' => 'yarn.lock',
+			'pnpm' => 'pnpm-lock.yaml',
+			'bun'  => 'bun.lockb',
+		);
+
+		if ( isset( $lock_files[ $manager ] ) ) {
+			$lock_file = $base . $lock_files[ $manager ];
+			if ( file_exists( $lock_file ) ) {
+				return $lock_file;
+			}
+		}
+
+		return null;
 	}
 }
