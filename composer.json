@@ -1,0 +1,74 @@
+{
+  "name": "wpmoo/wpmoo-cli",
+  "description": "WPMoo CLI - modular commands for the WPMoo framework (PHP 7.4+)",
+  "license": "GPL-2.0-or-later",
+  "homepage": "https://wpmoo.org",
+  "authors": [
+    {
+      "name": "WPMoo",
+      "email": "hello@wpmoo.org",
+      "homepage": "https://wpmoo.org/"
+    }
+  ],
+  "keywords": [
+    "wordpress",
+    "cli",
+    "wp-cli",
+    "plugin",
+    "framework",
+    "wpmoo"
+  ],
+  "type": "library",
+  "require": {
+    "php": ">=7.4"
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "0.1.x-dev"
+    }
+  },
+  "suggest": {
+    "wpmoo/wpmoo": "Provides extra helpers when running inside WPMoo-based projects"
+  },
+  "autoload": {
+    "psr-4": {
+      "WPMoo\\CLI\\": "src/CLI/"
+    }
+  },
+  "bin": [
+    "bin/moo"
+  ],
+  "require-dev": {
+    "wpmoo/wpmoo-coding-standards": "dev-main",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "phpstan/phpstan": "^1.11"
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    }
+  },
+  "scripts": {
+    "moo": "php bin/moo",
+    "check:validate": "composer validate",
+    "lint:php": "find . -path './vendor' -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l",
+    "phpcs": "vendor/bin/phpcs -n",
+    "phpcbf": "vendor/bin/phpcbf",
+    "phpstan": "vendor/bin/phpstan analyse --no-progress --memory-limit=512M",
+    "hooks:install": "git config core.hooksPath .githooks && chmod +x .githooks/pre-commit .githooks/pre-push",
+    "setup-wrapper": "php scripts/generate-moo-wrapper.php",
+    "post-install-cmd": [
+      "@setup-wrapper"
+    ],
+    "post-update-cmd": [
+      "@setup-wrapper"
+    ],
+    "check": [
+      "@check:validate",
+      "@lint:php",
+      "@phpcbf",
+      "@phpcs",
+      "@phpstan"
+    ]
+  }
+}

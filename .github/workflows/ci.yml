@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    name: Static checks (Composer/PHPCS)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: composer:v2
+          ini-values: memory_limit=-1
+      - name: Compute composer cache key
+        id: composer-cache
+        run: |
+          if [ -f composer.lock ]; then
+            echo "lockhash=$(sha256sum composer.lock | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+          else
+            echo "lockhash=none" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.composer/cache
+            ~/.cache/composer
+          key: composer-${{ steps.composer-cache.outputs.lockhash }}
+          restore-keys: |
+            composer-
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --ansi
+      - name: Composer validate
+        run: composer validate --strict --no-check-lock --ansi
+      - name: Lint PHP
+        run: |
+          if composer run --list | grep -q "lint:php"; then
+            composer run lint:php --ansi
+          else
+            find . -path './vendor' -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l
+          fi
+      - name: PHPCS
+        run: |
+          if composer run --list | grep -q "phpcs"; then
+            composer run phpcs --ansi
+          else
+            vendor/bin/phpcs -n || true
+          fi
+      - name: CLI smoke test (help)
+        run: |
+          php bin/moo --help || vendor/bin/moo --help
