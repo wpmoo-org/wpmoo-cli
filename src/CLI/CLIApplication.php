@@ -15,7 +15,12 @@
 namespace WPMoo\CLI;
 
 use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Input\InputDefinition;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Command\ListCommand;
+use Symfony\Component\Console\Command\HelpCommand;
 use WPMoo\CLI\Commands\InfoCommand;
+use WPMoo\CLI\Support\Banner;
 
 /**
  * CLI Application class to register and run commands.
@@ -37,5 +42,64 @@ class CLIApplication extends Application
         foreach ($commands as $command) {
             $this->add($command);
         }
+    }
+
+    public function getHelp(): string
+    {
+        // Banner sınıfından statik olarak çağırın
+        $help = Banner::getAsciiArt() . "\n" . parent::getHelp();
+        return $help;
+    }
+
+    /**
+     * Configure the default command.
+     */
+    public function getDefaultCommand(): string
+    {
+        return 'list';
+    }
+
+    /**
+     * Get default commands provided by the application.
+     *
+     * @return array
+     */
+    protected function getDefaultCommands(): array
+    {
+        // Return only essential commands (but without default options)
+        $defaultCommands = parent::getDefaultCommands();
+
+        // Filter to only include commands we want (ListCommand)
+        $filteredCommands = array();
+        foreach ($defaultCommands as $command) {
+            // Sadece ListCommand ve HelpCommand'i tutuyoruz.
+            if ($command instanceof ListCommand) {
+                $filteredCommands[] = $command;
+            } elseif ($command instanceof HelpCommand) {
+                // HelpCommand'in çalışması için tutuyoruz, ancak gizli yapıyoruz.
+                $command->setHidden(true);
+                $filteredCommands[] = $command;
+            }
+        }
+
+        return $filteredCommands;
+    }
+
+    /**
+     * Get the default input definition for the application.
+     *
+     * @return InputDefinition An InputDefinition instance
+     */
+    protected function getDefaultInputDefinition(): InputDefinition
+    {
+        // Start with the parent's default definition
+        $inputDefinition = parent::getDefaultInputDefinition();
+
+        // Clear all options and add only the ones we want
+        $inputDefinition->setOptions(array(
+            new InputOption('help', 'h', InputOption::VALUE_NONE, 'Display help for the given command. When no command is given display help for the list command'),
+        ));
+
+        return $inputDefinition;
     }
 }
