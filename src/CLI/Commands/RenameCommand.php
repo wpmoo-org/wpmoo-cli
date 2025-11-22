@@ -47,7 +47,7 @@ class RenameCommand extends BaseCommand
     {
         $output->writeln('');
         $output->writeln('<info>------------------------------------------------</info>');
-        $output->writeln('<info>🙌 Rename WPMoo Plugin</info>');
+        $output->writeln('<info> Rename WPMoo Plugin</info>');
         $output->writeln('<info>------------------------------------------------</info>');
         $output->writeln('');
 
@@ -59,14 +59,22 @@ class RenameCommand extends BaseCommand
         }
 
         $oldDir = dirname($projectInfo['main_file']);
-        if (!file_exists($oldDir . '/.wpmoo')) {
+        $oldProjectConfig = $this->getProjectConfig($oldDir);
+
+        if (empty($oldProjectConfig['name'])) {
             $output->writeln('→ You are renaming your plugin for the first time.');
             $output->writeln('');
         }
 
-        $output->writeln("🚦 ---------------------------------------------------------------------------------");
-        $output->writeln("🚦 Remember the new plugin name and namespace must not contain \"WPMoo\"");
-        $output->writeln("🚦 ---------------------------------------------------------------------------------");
+        $output->writeln('<comment>Current Project Info:</comment>');
+        $output->writeln("- Plugin Name:   " . ($oldProjectConfig['name'] ?: '<not set>'));
+        $output->writeln("- Namespace:     " . ($oldProjectConfig['namespace'] ?: '<not set>'));
+        $output->writeln("- Text Domain:   " . ($oldProjectConfig['text_domain'] ?: '<not set>'));
+        $output->writeln('');
+
+        $output->writeln("---------------------------------------------------------------------------------");
+        $output->writeln(" Remember the new plugin name and namespace must not contain \"WPMoo\"");
+        $output->writeln("---------------------------------------------------------------------------------");
         $output->writeln('');
 
         // 2. Ask for new names
@@ -84,26 +92,70 @@ class RenameCommand extends BaseCommand
         });
         $newName = $helper->ask($input, $output, $pluginNameQuestion);
 
-        $namespaceQuestion = new Question('❓ Namespace: ');
-        $namespaceQuestion->setValidator(function ($answer) {
-            if (empty($answer)) {
-                throw new \RuntimeException('Namespace cannot be empty.');
-            }
-            if (stripos($answer, 'WPMoo') !== false) {
-                throw new \RuntimeException('Namespace cannot contain "WPMoo".');
-            }
-            if (!preg_match('/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/', $answer)) {
-                throw new \RuntimeException('Namespace is not valid.');
-            }
-            return $answer;
-        });
-        $newNamespace = $helper->ask($input, $output, $namespaceQuestion);
+        // Derive recommended Namespace
+        $recommendedNamespace = str_replace(' ', '', ucwords($newName));
+
+        // Prompt for Namespace
+        $namespaceConfirmationQuestion = new ConfirmationQuestion(
+            "❓ Recommended Namespace: <comment>{$recommendedNamespace}</comment> (Accept Y/n) [default: Y]: ",
+            true
+        );
+
+        if ($helper->ask($input, $output, $namespaceConfirmationQuestion)) {
+            $newNamespace = $recommendedNamespace;
+            $output->writeln("→ Using Namespace: <info>{$newNamespace}</info>");
+        } else {
+            $namespaceQuestion = new Question('❓ Enter custom Namespace: ');
+            $namespaceQuestion->setValidator(function ($answer) {
+                if (empty($answer)) {
+                    throw new \RuntimeException('Namespace cannot be empty.');
+                }
+                if (stripos($answer, 'WPMoo') !== false) {
+                    throw new \RuntimeException('Namespace cannot contain "WPMoo".');
+                }
+                if (!preg_match('/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/', $answer)) {
+                    throw new \RuntimeException('Namespace is not valid.');
+                }
+                return $answer;
+            });
+            $newNamespace = $helper->ask($input, $output, $namespaceQuestion);
+        }
+
+        // Derive recommended Text Domain
+        $recommendedTextDomain = $this->slugify($newName);
+
+        // Prompt for Text Domain
+        $textDomainConfirmationQuestion = new ConfirmationQuestion(
+            "❓ Recommended Text Domain: <comment>{$recommendedTextDomain}</comment> (Accept Y/n) [default: Y]: ",
+            true
+        );
+
+        if ($helper->ask($input, $output, $textDomainConfirmationQuestion)) {
+            $newTextDomain = $recommendedTextDomain;
+            $output->writeln("→ Using Text Domain: <info>{$newTextDomain}</info>");
+        } else {
+            $textDomainQuestion = new Question('❓ Enter custom Text Domain: ');
+            $textDomainQuestion->setValidator(function ($answer) {
+                if (empty($answer)) {
+                    throw new \RuntimeException('Text Domain cannot be empty.');
+                }
+                // Basic validation: must be slug-like
+                if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $answer)) {
+                    throw new \RuntimeException('Text Domain is not valid (must be lowercase, hyphen-separated).');
+                }
+                return $answer;
+            });
+            $newTextDomain = $helper->ask($input, $output, $textDomainQuestion);
+        }
 
         // 3. Generate new filename and show confirmation
-        $newFilename = strtolower(str_replace(' ', '-', $newName)) . '.php';
+        $newFilename = $this->slugify($newName) . '.php';
 
         $output->writeln('');
-        $output->writeln("→ The new plugin filename, name and namespace will be '{$newFilename}', '{$newName}', '{$newNamespace}'");
+        $output->writeln("→ The new plugin filename will be '<info>{$newFilename}</info>'");
+        $output->writeln("→ The new plugin name will be '<info>{$newName}</info>'");
+        $output->writeln("→ The new namespace will be '<info>{$newNamespace}</info>'");
+        $output->writeln("→ The new text domain will be '<info>{$newTextDomain}</info>'");
 
         $confirmationQuestion = new ConfirmationQuestion('❓ Continue (y/n) (default: n): ', false);
 
@@ -118,7 +170,7 @@ class RenameCommand extends BaseCommand
         $output->writeln('');
 
         // 4. Perform renaming
-        $this->renamePlugin($projectInfo, $newName, $newNamespace, $newFilename, $output);
+        $this->renamePlugin($projectInfo, $newName, $newNamespace, $newTextDomain, $newFilename, $output);
 
         $output->writeln('');
         $output->writeln('<info>Plugin renamed successfully!</info>');
@@ -135,22 +187,42 @@ class RenameCommand extends BaseCommand
      * @param string $newFilename
      * @param OutputInterface $output
      */
-    private function renamePlugin(array $projectInfo, string $newName, string $newNamespace, string $newFilename, OutputInterface $output)
+    private function renamePlugin(array $projectInfo, string $newName, string $newNamespace, string $newTextDomain, string $newFilename, OutputInterface $output)
     {
         $oldMainFile = $projectInfo['main_file'];
         $oldDir = dirname($oldMainFile);
         $newMainFile = $oldDir . '/' . $newFilename;
 
-        // Get old namespace BEFORE any renaming
-        $oldNamespace = $this->getOldNamespace($oldDir);
-        if (!$oldNamespace) {
-            $output->writeln('<error>Could not determine the old namespace. Aborting.</error>');
+        // Get old project config
+        $oldProjectConfig = $this->getProjectConfig($oldDir);
+        $oldName = $oldProjectConfig['name'] ?? '';
+        $oldNamespace = $oldProjectConfig['namespace'] ?? '';
+        $oldTextDomain = $oldProjectConfig['text_domain'] ?? '';
+
+        if (empty($oldNamespace)) {
+            $output->writeln('<error>Could not determine the old namespace from wpmoo-config.yml or composer.json. Aborting.</error>');
+            return;
+        }
+        // If oldTextDomain is not found in config, try to get it from the main plugin file header
+        if (empty($oldTextDomain)) {
+            $oldTextDomain = $this->getOldTextDomain($oldMainFile);
+            if (empty($oldTextDomain)) {
+                $output->writeln('<error>Could not determine the old text domain from wpmoo-config.yml or plugin header. Aborting.</error>');
+                return;
+            }
+        }
+
+        // $newTextDomain is now passed as an argument from handleExecute.
+
+        // Rename main plugin file
+        if (file_exists($oldMainFile)) {
+            rename($oldMainFile, $newMainFile);
+            $output->writeln("✓ Renamed '{$oldMainFile}' to '{$newMainFile}'");
+        } else {
+            $output->writeln("<error>Main plugin file '{$oldMainFile}' not found. Cannot rename.</error>");
             return;
         }
 
-        // Rename main plugin file
-        rename($oldMainFile, $newMainFile);
-        $output->writeln("✓ Renamed '{$oldMainFile}' to '{$newMainFile}'");
 
         // Update plugin name in main file
         $this->updatePluginName($newMainFile, $newName, $output);
@@ -158,9 +230,35 @@ class RenameCommand extends BaseCommand
         // Update namespaces
         $this->updateNamespaces($oldDir, $oldNamespace, $newNamespace, $output);
 
-        // Store new namespace for next time
-        file_put_contents($oldDir . '/.wpmoo', $newNamespace);
-        $output->writeln("✓ Saved new namespace '{$newNamespace}' to .wpmoo file");
+        // Update text domains
+        $this->updateTextDomains($oldDir, $oldTextDomain, $newTextDomain, $output);
+
+        // Store new project config
+        $this->saveProjectConfig($oldDir, $newName, $newNamespace, $newTextDomain);
+        $output->writeln("✓ Saved new project config to wpmoo-config.yml");
+    }
+
+    /**
+     * Saves the new project configuration to wpmoo-config.yml.
+     *
+     * @param string $dir
+     * @param string $newName
+     * @param string $newNamespace
+     * @param string $newTextDomain
+     */
+    private function saveProjectConfig(string $dir, string $newName, string $newNamespace, string $newTextDomain)
+    {
+        $configFile = $dir . '/wpmoo-config.yml';
+        $config = [];
+        if (file_exists($configFile)) {
+            $config = Yaml::parseFile($configFile);
+        }
+
+        $config['project']['name'] = $newName;
+        $config['project']['namespace'] = $newNamespace;
+        $config['project']['text_domain'] = $newTextDomain;
+
+        file_put_contents($configFile, Yaml::dump($config, 2));
     }
 
     /**
@@ -211,16 +309,96 @@ class RenameCommand extends BaseCommand
     }
 
     /**
-     * Gets the old namespace from .wpmoo file or composer.json.
+     * Updates the text domains in all PHP files.
      *
      * @param string $dir
+     * @param string $oldTextDomain
+     * @param string $newTextDomain
+     * @param OutputInterface $output
+     */
+    private function updateTextDomains(string $dir, string $oldTextDomain, string $newTextDomain, OutputInterface $output)
+    {
+        if (empty($oldTextDomain) || empty($newTextDomain) || $oldTextDomain === $newTextDomain) {
+            return;
+        }
+
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
+        foreach ($iterator as $file) {
+            if ($file->isDir() || $file->getExtension() !== 'php') {
+                continue;
+            }
+
+            $path = $file->getRealPath();
+            $content = file_get_contents($path);
+
+            // This regex will find strings that look like text domains within translation functions
+            // and load_plugin_textdomain. It's a bit broad but should cover most cases.
+            $pattern = '/(\'|\")' . preg_quote($oldTextDomain, '/') . '(\'|\")/';
+            $replacement = '$1' . $newTextDomain . '$2';
+            $newContent = preg_replace($pattern, $replacement, $content);
+
+            if ($content !== $newContent) {
+                file_put_contents($path, $newContent);
+                $output->writeln("✓ Updated text domain in '{$path}' (from '{$oldTextDomain}' to '{$newTextDomain}')");
+            }
+        }
+    }
+
+    /**
+     * Extracts the old text domain from the main plugin file.
+     *
+     * @param string $mainFile
      * @return string|null
      */
-    private function getOldNamespace(string $dir): ?string
+    private function getOldTextDomain(string $mainFile): ?string
     {
-        $wpmooFile = $dir . '/.wpmoo';
-        if (file_exists($wpmooFile)) {
-            return trim(file_get_contents($wpmooFile));
+        $content = file_get_contents($mainFile);
+        if (preg_match('/^[ \t\/*#@]*Text Domain:\s*(.*)$/im', $content, $matches)) {
+            return trim($matches[1]);
+        }
+
+        // Fallback to slugified plugin name if Text Domain header is not found
+        if (preg_match('/^[ \t\/*#@]*Plugin Name:\s*(.*)$/im', $content, $matches)) {
+            // Need to slugify the plugin name to get the text domain
+            return $this->slugify(trim($matches[1]));
+        }
+
+        return null;
+    }
+
+    /**
+     * Converts a string to a slug (lowercase, hyphens instead of spaces).
+     * This is a simplified version of WordPress's sanitize_title.
+     *
+     * @param string $text
+     * @return string
+     */
+    private function slugify(string $text): string
+    {
+        $text = preg_replace('~[^\pL\d]+~u', '-', $text); // Replace non-alphanumeric with hyphen
+        $text = iconv('utf-8', 'us-ascii//TRANSLIT', $text); // Transliterate
+        $text = strtolower($text); // Convert to lowercase
+        $text = preg_replace('~[^-\w]+~', '', $text); // Remove unwanted characters
+        $text = trim($text, '-'); // Trim hyphens from beginning and end
+        $text = preg_replace('~-+~', '-', $text); // Replace multiple hyphens with a single one
+
+        return $text;
+    }
+
+    /**
+     * Gets the project configuration from wpmoo-config.yml or composer.json.
+     *
+     * @param string $dir
+     * @return array
+     */
+    private function getProjectConfig(string $dir): array
+    {
+        $configFile = $dir . '/wpmoo-config.yml';
+        if (file_exists($configFile)) {
+            $config = Yaml::parseFile($configFile);
+            if (isset($config['project'])) {
+                return $config['project'];
+            }
         }
 
         $composerFile = $dir . '/composer.json';
@@ -228,12 +406,24 @@ class RenameCommand extends BaseCommand
             $composerData = json_decode(file_get_contents($composerFile), true);
             if (isset($composerData['autoload']['psr-4'])) {
                 $namespaces = $composerData['autoload']['psr-4'];
-                // Return the first namespace found (assuming one primary namespace)
-                return rtrim(key($namespaces), '\\');
+                $namespace = rtrim(key($namespaces), '\\');
+                $name = key($composerData['autoload']['psr-4']); // Assuming the namespace key is the project name
+                $name = rtrim($name, '\\');
+                $textDomain = $this->slugify($name);
+
+                return [
+                    'name' => $name,
+                    'namespace' => $namespace,
+                    'text_domain' => $textDomain,
+                ];
             }
         }
 
-        return null;
+        return [
+            'name' => '',
+            'namespace' => '',
+            'text_domain' => '',
+        ];
     }
 
     /**
