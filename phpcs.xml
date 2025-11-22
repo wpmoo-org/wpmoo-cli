@@ -1,28 +1,29 @@
 <?xml version="1.0"?>
 <ruleset name="WPMoo CLI">
-  <description>PHPCS rules for the WPMoo CLI package.</description>
-
-  <!-- Reference shared coding standard directly from vendor path -->
-  <rule ref="./vendor/wpmoo/wpmoo-coding-standards/WPMoo/ruleset.xml">
-    <!-- CLI is a PSR-4 library; relax WordPress file naming rules -->
-    <exclude name="WordPress.Files.FileName" />
-    <exclude name="Squiz.Classes.ClassFileName" />
-    <!-- CLI: allow output without WP escaping helpers -->
-    <exclude name="WordPress.Security.EscapeOutput" />
-    <!-- CLI: don't require file/class/function docblocks for every symbol -->
-    <exclude name="Squiz.Commenting.FileComment" />
-    <exclude name="Squiz.Commenting.ClassComment" />
-    <exclude name="Squiz.Commenting.FunctionComment" />
-    <!-- CLI: disable Yoda conditions requirement -->
-    <exclude name="WordPress.PHP.YodaConditions" />
-    <!-- CLI: allow camelCase method names -->
-    <exclude name="WordPress.NamingConventions.ValidFunctionName" />
-    <!-- CLI: do not require var docblocks on every member -->
-    <exclude name="Squiz.Commenting.VariableComment" />
-  </rule>
+  <description>PHPCS rules for the WPMoo CLI package using Symfony Console standards.</description>
 
   <file>src</file>
 
   <exclude-pattern>vendor/*</exclude-pattern>
   <exclude-pattern>node_modules/*</exclude-pattern>
+
+  <!-- Use PSR-12 as the base standard -->
+  <rule ref="PSR12">
+    <!-- Allow exit() in CLI applications -->
+    <exclude name="WordPress.Security.EscapeOutput.OutputNotEscaped"/>
+    <exclude name="WordPress.Security.ValidatedSanitizedInput.InputNotValidated"/>
+    <exclude name="Generic.PHP.ForbiddenFunctions"/>
+  </rule>
+
+  <!-- Allow exit() for CLI applications -->
+  <rule ref="Generic.PHP.ForbiddenFunctions">
+    <properties>
+      <property name="forbiddenFunctions" type="array">
+        <element key="die" value="null"/>
+        <element key="eval" value="null"/>
+        <!-- Remove exit from forbidden functions -->
+      </property>
+    </properties>
+  </rule>
+
 </ruleset>

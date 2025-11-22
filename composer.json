@@ -41,7 +41,8 @@
   "require-dev": {
     "wpmoo/wpmoo-coding-standards": "dev-main",
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-    "phpstan/phpstan": "^1.11"
+    "phpstan/phpstan": "^1.11",
+    "symfony/console": "^6.0 || ^7.0"
   },
   "config": {
     "allow-plugins": {
