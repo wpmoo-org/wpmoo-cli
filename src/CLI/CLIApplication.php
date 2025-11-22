@@ -15,6 +15,7 @@
 namespace WPMoo\CLI;
 
 use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Command\ListCommand;
@@ -85,19 +86,43 @@ class CLIApplication extends Application
         return $filteredCommands;
     }
 
-    /**
+/**
      * Get the default input definition for the application.
      *
      * @return InputDefinition An InputDefinition instance
      */
     protected function getDefaultInputDefinition(): InputDefinition
     {
-        // Start with the parent's default definition
-        $inputDefinition = parent::getDefaultInputDefinition();
+        // By using InputArgument::REQUIRED, you tell Symfony this first positional input is mandatory.
+        $inputDefinition = new InputDefinition(array(
+            // 1. Mandatory Input: The 'command' argument. This fixes the error.
+            new InputArgument(
+                'command',
+                InputArgument::REQUIRED,
+                'The command to execute'
+            ),
 
-        // Clear all options and add only the ones we want
-        $inputDefinition->setOptions(array(
-            new InputOption('help', 'h', InputOption::VALUE_NONE, 'Display help for the given command. When no command is given display help for the list command'),
+            // 2. Visible Option: The mandatory help option.
+            new InputOption(
+                'help',
+                'h',
+                InputOption::VALUE_NONE,
+                'Display help for the given command. When no command is given display help for the list command'
+            ),
+
+            // 3. Hidden Options: --ansi and --no-ansi.
+            new InputOption(
+                'ansi',
+                null,
+                InputOption::VALUE_NONE,
+                'Forces ANSI output (color).'
+            ),
+            new InputOption(
+                'no-ansi',
+                null,
+                InputOption::VALUE_NONE,
+                'Disables ANSI output (color).'
+            ),
         ));
 
         return $inputDefinition;
