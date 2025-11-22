@@ -20,6 +20,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Question\ChoiceQuestion;
 
 /**
  * Version command to handle plugin version management.
@@ -122,6 +123,7 @@ class VersionCommand extends BaseCommand
         $newVersion = $version;
         $incrementType = null;
 
+        // If specific options are provided via command line, use them
         if ($major) {
             $newVersion = $this->incrementMajor($currentVersion);
             $incrementType = 'major';
@@ -131,7 +133,7 @@ class VersionCommand extends BaseCommand
         } elseif ($patch) {
             $newVersion = $this->incrementPatch($currentVersion);
             $incrementType = 'patch';
-        } elseif ($preAlpha !== false) { // Use !== false because InputOption::VALUE_OPTIONAL returns null if not specified
+        } elseif ($preAlpha !== false) {
             $prefix = $preAlpha ?: 'alpha';
             $newVersion = $this->incrementPreRelease($currentVersion, $prefix);
             $incrementType = "pre-{$prefix}";
@@ -139,20 +141,14 @@ class VersionCommand extends BaseCommand
             $prefix = $preBeta ?: 'beta';
             $newVersion = $this->incrementPreRelease($currentVersion, $prefix);
             $incrementType = "pre-{$prefix}";
-        } elseif ($preRc !== false) {
-            $prefix = $preRc ?: 'rc';
-            $newVersion = $this->incrementPreRelease($currentVersion, $prefix);
-            $incrementType = "pre-{$prefix}";
-        }
+        } elseif (!$version) {
+            $newVersion = $this->interactiveVersionSelection($input, $output, $currentVersion);
 
-        // If no specific increment requested but no version provided, increment patch
-        if (!$newVersion && !$incrementType) {
-            $newVersion = $this->incrementPatch($currentVersion);
-            $incrementType = 'patch';
-        }
-
-        // If version still not set, use the provided one
-        if (!$newVersion) {
+            if ($newVersion === null) {
+                $output->writeln('<comment>Operation cancelled.</comment>');
+                return 0;
+            }
+        } else {
             $newVersion = $version;
         }
 
@@ -164,7 +160,7 @@ class VersionCommand extends BaseCommand
 
         $output->writeln("<comment>New version: {$newVersion}</comment>");
 
-        // Confirm with user unless --no-interaction is specified
+        // Confirm with user
         $noInteraction = $input->getOption('no-interaction');
 
         if (!$noInteraction) {
@@ -192,6 +188,89 @@ class VersionCommand extends BaseCommand
     }
 
     /**
+     * Interactive version selection menu.
+     *
+     * @param InputInterface $input Input interface.
+     * @param OutputInterface $output Output interface.
+     * @param string $current Current version.
+     * @return string|null New version or null if cancelled.
+     */
+    private function interactiveVersionSelection(InputInterface $input, OutputInterface $output, string $current): ?string
+    {
+        // Define version options with descriptions
+        $options = [
+            'patch'      => sprintf(
+                "Patch     - Increment patch (x.y.z → x.y.z+1) [<comment>%s</comment>]",
+                $this->incrementPatch($current)
+            ),
+            'minor'      => sprintf(
+                "Minor     - Increment minor (x.y.z → x.y+1.0) [<comment>%s</comment>]",
+                $this->incrementMinor($current)
+            ),
+            'major'      => sprintf(
+                "Major     - Increment major (x.y.z → x+1.0.0) [<comment>%s</comment>]",
+                $this->incrementMajor($current)
+            ),
+            'pre-alpha'  => sprintf(
+                "Pre-alpha - Pre-alpha (x.y.z → x.y.z-alpha.1) [<comment>%s</comment>]",
+                $this->incrementPreRelease($current, 'alpha')
+            ),
+            'pre-beta'   => sprintf(
+                "Pre-beta  - Pre-beta (x.y.z → x.y.z-beta.1) [<comment>%s</comment>]",
+                $this->incrementPreRelease($current, 'beta')
+            ),
+            'pre-rc'     => sprintf(
+                "Pre-RC    - Pre-release candidate (x.y.z → x.y.z-rc.1) [<comment>%s</comment>]",
+                $this->incrementPreRelease($current, 'rc')
+            ),
+            'custom'     => 'Custom    - Enter custom version',
+            'cancel'     => 'Cancel    - Cancel operation'
+        ];
+
+        // Create choice question
+        $question = new ChoiceQuestion(
+            '<comment>Select version increment type:</comment>',
+            $options,
+            'patch' // Default to patch increment
+        );
+
+        $question->setErrorMessage('Option %s is invalid.');
+
+        $helper = $this->getHelper('question');
+        $choice = $helper->ask($input, $output, $question);
+
+        // Process selection
+        switch ($choice) {
+            case 'cancel':
+                return null; // Cancelled
+            case 'patch':
+                return $this->incrementPatch($current);
+            case 'minor':
+                return $this->incrementMinor($current);
+            case 'major':
+                return $this->incrementMajor($current);
+            case 'pre-alpha':
+                return $this->incrementPreRelease($current, 'alpha');
+            case 'pre-beta':
+                return $this->incrementPreRelease($current, 'beta');
+            case 'pre-rc':
+                return $this->incrementPreRelease($current, 'rc');
+            case 'custom':
+                $customQuestion = new \Symfony\Component\Console\Question\Question("Enter new version (current: {$current}): ");
+                $customQuestion->setValidator(function ($answer) {
+                    if (!empty($answer) && !$this->isValidVersion($answer)) {
+                        throw new \RuntimeException("Invalid version format: {$answer}");
+                    }
+                    return $answer;
+                });
+                $customVersion = $helper->ask($input, $output, $customQuestion);
+                return $customVersion;
+            default:
+                return $this->incrementPatch($current); // Default to patch
+        }
+    }
+
+    /**
      * Identify the project type and location of version files.
      *
      * @return array Project information.
@@ -202,7 +281,10 @@ class VersionCommand extends BaseCommand
 
         // Check for wpmoo framework project
         $wpmooSrcPath = $cwd . '/src/wpmoo.php';
-        if (file_exists($wpmooSrcPath) && strpos(file_get_contents($wpmooSrcPath), 'WPMoo Framework') !== false) {
+        $isWPMooFramework = file_exists($wpmooSrcPath) &&
+            strpos(file_get_contents($wpmooSrcPath), 'WPMoo Framework') !== false;
+
+        if ($isWPMooFramework) {
             return [
                 'found' => true,
                 'type' => 'wpmoo-framework',
@@ -366,7 +448,8 @@ class VersionCommand extends BaseCommand
         // If current version is already a pre-release of the same prefix, increment the number
         if ($preRelease && strpos($preRelease, $prefix) === 0) {
             // Extract the number and increment it
-            if (preg_match("/{$prefix}\.(\d+)/", $preRelease, $numMatches)) {
+            $isPreRelease = preg_match("/{$prefix}\.(\d+)/", $preRelease, $numMatches);
+            if ($isPreRelease) {
                 $num = (int)$numMatches[1];
                 return "{$major}.{$minor}.{$patch}-{$prefix}." . ($num + 1);
             }
@@ -401,7 +484,8 @@ class VersionCommand extends BaseCommand
             $replacement = '${1}' . $newVersion;
             $newContent = preg_replace($pattern, $replacement, $content);
 
-            if ($newContent !== $content) {
+            $contentChanged = $newContent !== $content;
+            if ($contentChanged) {
                 if (file_put_contents($mainFile, $newContent) !== false) {
                     $output->writeln("<info>Updated version in {$mainFile}</info>");
                 } else {
@@ -423,7 +507,8 @@ class VersionCommand extends BaseCommand
             $replacement = '${1}' . $newVersion;
             $newContent = preg_replace($pattern, $replacement, $content);
 
-            if ($newContent !== $content) {
+            $contentChanged = $newContent !== $content;
+            if ($contentChanged) {
                 if (file_put_contents($readmeFile, $newContent) !== false) {
                     $output->writeln("<info>Updated stable tag in {$readmeFile}</info>");
                 } else {
