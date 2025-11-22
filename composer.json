@@ -20,7 +20,8 @@
   ],
   "type": "library",
   "require": {
-    "php": ">=7.4"
+    "php": ">=7.4",
+    "symfony/console": "^5.4"
   },
   "extra": {
     "branch-alias": {
@@ -41,12 +42,12 @@
   "require-dev": {
     "wpmoo/wpmoo-coding-standards": "dev-main",
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-    "phpstan/phpstan": "^1.11",
-    "symfony/console": "^6.0 || ^7.0"
+    "phpstan/phpstan": "^1.11"
   },
   "config": {
     "allow-plugins": {
-      "dealerdirect/phpcodesniffer-composer-installer": true
+      "dealerdirect/phpcodesniffer-composer-installer": true,
+      "phpstan/extension-installer": true
     }
   },
   "scripts": {

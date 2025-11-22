@@ -4,7 +4,10 @@ parameters:
     paths:
         - src
     excludePaths:
-        - vendor
         - tests
+    scanDirectories:
+        - vendor
     reportUnmatchedIgnoredErrors: false
     treatPhpDocTypesAsCertain: false
+    bootstrapFiles:
+    - vendor/autoload.php
