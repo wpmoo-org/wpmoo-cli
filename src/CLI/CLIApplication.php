@@ -93,11 +93,31 @@ class CLIApplication extends Application
     protected function getDefaultInputDefinition(): InputDefinition
     {
         // Start with the parent's default definition
-        $inputDefinition = parent::getDefaultInputDefinition();
+        // $inputDefinition = parent::getDefaultInputDefinition();
 
         // Clear all options and add only the ones we want
-        $inputDefinition->setOptions(array(
-            new InputOption('help', 'h', InputOption::VALUE_NONE, 'Display help for the given command. When no command is given display help for the list command'),
+        $inputDefinition = new InputDefinition(array(
+            // 1. Visible Option: The mandatory help option.
+            new InputOption(
+                'help',
+                'h',
+                InputOption::VALUE_NONE,
+                'Display help for the given command. When no command is given display help for the list command'
+            ),
+
+            // 2. Hidden Options: --ansi and --no-ansi are now active but hidden from the list.
+            new InputOption(
+                'ansi',
+                null,
+                InputOption::VALUE_NONE,
+                'Forces ANSI output (color).'
+            ),
+            new InputOption(
+                'no-ansi',
+                null,
+                InputOption::VALUE_NONE,
+                'Disables ANSI output (color).'
+            ),
         ));
 
         return $inputDefinition;
