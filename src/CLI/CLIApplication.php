@@ -10,7 +10,7 @@
  * @link  https://wpmoo.org WPMoo – WordPress Micro Object-Oriented Framework.
  * @link  https://github.com/wpmoo/wpmoo GitHub Repository.
  * @license https://spdx.org/licenses/GPL-2.0-or-later.html GPL-2.0-or-later
- */
+ **/
 
 namespace WPMoo\CLI;
 
@@ -33,7 +33,9 @@ class CLIApplication extends Application
      */
     public function __construct()
     {
-        parent::__construct('WPMoo CLI', 'dev-main');
+        // Get version from composer.json or use a default
+        $version = $this->getVersion();
+        parent::__construct('WPMoo CLI', $version);
 
         // Register built-in commands.
         $commands = array(
@@ -47,8 +49,9 @@ class CLIApplication extends Application
 
     public function getHelp(): string
     {
-        // Banner sınıfından statik olarak çağırın
-        $help = Banner::getAsciiArt() . "\n" . parent::getHelp();
+        // Take the original help output (with banner)
+        $help = Banner::getAsciiArt();
+
         return $help;
     }
 
@@ -73,11 +76,11 @@ class CLIApplication extends Application
         // Filter to only include commands we want (ListCommand)
         $filteredCommands = array();
         foreach ($defaultCommands as $command) {
-            // Sadece ListCommand ve HelpCommand'i tutuyoruz.
+            // Keep only ListCommand and HelpCommand
             if ($command instanceof ListCommand) {
                 $filteredCommands[] = $command;
             } elseif ($command instanceof HelpCommand) {
-                // HelpCommand'in çalışması için tutuyoruz, ancak gizli yapıyoruz.
+                // Keep HelpCommand for functionality, but hide it
                 $command->setHidden(true);
                 $filteredCommands[] = $command;
             }
@@ -86,45 +89,69 @@ class CLIApplication extends Application
         return $filteredCommands;
     }
 
-/**
+    /**
      * Get the default input definition for the application.
      *
      * @return InputDefinition An InputDefinition instance
      */
     protected function getDefaultInputDefinition(): InputDefinition
     {
-        // By using InputArgument::REQUIRED, you tell Symfony this first positional input is mandatory.
+        // Create the default input definition with standard Symfony Console options
         $inputDefinition = new InputDefinition(array(
-            // 1. Mandatory Input: The 'command' argument. This fixes the error.
+            // 1. Command argument (optional - let Symfony handle this properly)
             new InputArgument(
                 'command',
-                InputArgument::REQUIRED,
+                InputArgument::OPTIONAL,
                 'The command to execute'
             ),
 
-            // 2. Visible Option: The mandatory help option.
+            // 2. Standard options
             new InputOption(
                 'help',
                 'h',
                 InputOption::VALUE_NONE,
                 'Display help for the given command. When no command is given display help for the list command'
             ),
-
-            // 3. Hidden Options: --ansi and --no-ansi.
+            new InputOption(
+                'quiet',
+                'q',
+                InputOption::VALUE_NONE,
+                'Do not output any message'
+            ),
             new InputOption(
                 'ansi',
                 null,
                 InputOption::VALUE_NONE,
-                'Forces ANSI output (color).'
+                'Force ANSI output'
             ),
             new InputOption(
                 'no-ansi',
                 null,
                 InputOption::VALUE_NONE,
-                'Disables ANSI output (color).'
+                'Disable ANSI output'
             ),
         ));
 
         return $inputDefinition;
+    }
+
+    /**
+     * Get the application version from composer.json or fallback to default
+     *
+     * @return string
+     */
+    public function getVersion(): string
+    {
+        $composerFile = dirname(__DIR__, 3) . '/composer.json';
+
+        if (file_exists($composerFile)) {
+            $composerData = json_decode(file_get_contents($composerFile), true);
+            if (isset($composerData['version'])) {
+                return $composerData['version'];
+            }
+        }
+
+        // Default fallback version
+        return 'dev-main';
     }
 }
