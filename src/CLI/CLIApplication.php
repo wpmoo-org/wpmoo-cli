@@ -21,6 +21,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Command\ListCommand;
 use Symfony\Component\Console\Command\HelpCommand;
 use WPMoo\CLI\Commands\InfoCommand;
+use WPMoo\CLI\Commands\VersionCommand;
 use WPMoo\CLI\Support\Banner;
 
 /**
@@ -40,6 +41,7 @@ class CLIApplication extends Application
         // Register built-in commands.
         $commands = array(
             new InfoCommand(),
+            new VersionCommand(),
         );
 
         foreach ($commands as $command) {
