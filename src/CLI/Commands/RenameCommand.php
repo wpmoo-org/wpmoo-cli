@@ -71,17 +71,13 @@ class RenameCommand extends BaseCommand
         }
 
         $output->writeln('<comment>Current Project Info:</comment>');
-        $output->writeln("- Plugin Name:   " . ($currentProjectInfo['name'] ?: '<not set>'));
-        $output->writeln("- Namespace:     " . ($currentProjectInfo['namespace'] ?: '<not set>'));
-        $output->writeln("- Text Domain:   " . ($currentProjectInfo['text_domain'] ?: '<not set>'));
-        $output->writeln("- Author:        " . ($currentProjectInfo['author'] ?: '<not set>'));
-        $output->writeln("- Description:   " . ($currentProjectInfo['description'] ?: '<not set>'));
-        $output->writeln("- License:       " . ($currentProjectInfo['license'] ?: '<not set>'));
-        $output->writeln("- License URI:   " . ($currentProjectInfo['license_uri'] ?: '<not set>'));
+        $output->writeln("<comment>- Plugin Name:</comment>   " . ($currentProjectInfo['name'] ?: '<not set>'));
+        $output->writeln("<comment>- Namespace:</comment>     " . ($currentProjectInfo['namespace'] ?: '<not set>'));
+        $output->writeln("<comment>- Text Domain:</comment>   " . ($currentProjectInfo['text_domain'] ?: '<not set>'));
         $output->writeln('');
 
         $output->writeln("---------------------------------------------------------------------------------");
-        $output->writeln(" Remember the new plugin name and namespace must not contain \"WPMoo\"");
+        $output->writeln("<comment> The new plugin name and namespace can not contain \"WPMoo\"</comment>");
         $output->writeln("---------------------------------------------------------------------------------");
         $output->writeln('');
 
@@ -119,8 +115,13 @@ class RenameCommand extends BaseCommand
                 if (stripos($answer, 'WPMoo') !== false) {
                     throw new \RuntimeException('Namespace cannot contain "WPMoo".');
                 }
-                if (!preg_match('/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/', $answer)) {
-                    throw new \RuntimeException('Namespace is not valid.');
+                // Allow namespaces with backslashes (sub-namespaces)
+                // Each part should be a valid PHP identifier
+                $parts = explode('\\', $answer);
+                foreach ($parts as $part) {
+                    if ($part !== '' && !preg_match('/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/', $part)) {
+                        throw new \RuntimeException('Namespace is not valid.');
+                    }
                 }
                 return $answer;
             });
@@ -150,32 +151,6 @@ class RenameCommand extends BaseCommand
             $newTextDomain = $helper->ask($input, $output, $textDomainQuestion);
         }
 
-        // Author
-        $newAuthor = $currentProjectInfo['author'];
-        $authorQuestion = new Question("❓ Author (current: <comment>{$currentProjectInfo['author']}</comment>, leave blank to keep): ", $currentProjectInfo['author']);
-        $newAuthor = $helper->ask($input, $output, $authorQuestion);
-        $output->writeln("→ Using Author: <info>{$newAuthor}</info>");
-
-
-        // Description
-        $newDescription = $currentProjectInfo['description'];
-        $descriptionQuestion = new Question("❓ Description (current: <comment>{$currentProjectInfo['description']}</comment>, leave blank to keep): ", $currentProjectInfo['description']);
-        $newDescription = $helper->ask($input, $output, $descriptionQuestion);
-        $output->writeln("→ Using Description: <info>{$newDescription}</info>");
-
-
-        // License
-        $newLicense = $currentProjectInfo['license'];
-        $licenseQuestion = new Question("❓ License (current: <comment>{$currentProjectInfo['license']}</comment>, leave blank to keep): ", $currentProjectInfo['license']);
-        $newLicense = $helper->ask($input, $output, $licenseQuestion);
-        $output->writeln("→ Using License: <info>{$newLicense}</info>");
-
-        // License URI
-        $newLicenseURI = $currentProjectInfo['license_uri'];
-        $licenseURIQuestion = new Question("❓ License URI (current: <comment>{$currentProjectInfo['license_uri']}</comment>, leave blank to keep): ", $currentProjectInfo['license_uri']);
-        $newLicenseURI = $helper->ask($input, $output, $licenseURIQuestion);
-        $output->writeln("→ Using License URI: <info>{$newLicenseURI}</info>");
-
         // 3. Generate new filename and show confirmation
         $newFilename = $this->slugify($newName) . '.php';
 
@@ -184,11 +159,6 @@ class RenameCommand extends BaseCommand
         $output->writeln("→ The new plugin name will be '<info>{$newName}</info>'");
         $output->writeln("→ The new namespace will be '<info>{$newNamespace}</info>'");
         $output->writeln("→ The new text domain will be '<info>{$newTextDomain}</info>'");
-        $output->writeln("→ The new author will be '<info>{$newAuthor}</info>'");
-        $output->writeln("→ The new description will be '<info>{$newDescription}</info>'");
-        $output->writeln("→ The new license will be '<info>{$newLicense}</info>'");
-        $output->writeln("→ The new license URI will be '<info>{$newLicenseURI}</info>'");
-
 
         $confirmationQuestion = new ConfirmationQuestion('❓ Continue (y/n) (default: n): ', false);
 
@@ -209,10 +179,6 @@ class RenameCommand extends BaseCommand
             $newNamespace,
             $newTextDomain,
             $newFilename,
-            $newAuthor,
-            $newDescription,
-            $newLicense,
-            $newLicenseURI,
             $output
         );
 
@@ -228,6 +194,7 @@ class RenameCommand extends BaseCommand
      * @param array $projectInfo
      * @param string $newName
      * @param string $newNamespace
+     * @param string $newTextDomain
      * @param string $newFilename
      * @param OutputInterface $output
      */
@@ -237,10 +204,6 @@ class RenameCommand extends BaseCommand
         string $newNamespace,
         string $newTextDomain,
         string $newFilename,
-        string $newAuthor,
-        string $newDescription,
-        string $newLicense,
-        string $newLicenseURI,
         OutputInterface $output
     ) {
         $oldMainFile = $projectInfo['main_file'];
@@ -257,10 +220,6 @@ class RenameCommand extends BaseCommand
         $oldName = $currentProjectInfo['name'] ?? '';
         $oldNamespace = $currentProjectInfo['namespace'] ?? '';
         $oldTextDomain = $currentProjectInfo['text_domain'] ?? '';
-        $oldAuthor = $currentProjectInfo['author'] ?? '';
-        $oldDescription = $currentProjectInfo['description'] ?? '';
-        $oldLicense = $currentProjectInfo['license'] ?? '';
-        $oldLicenseURI = $currentProjectInfo['license_uri'] ?? '';
 
         if (empty($oldNamespace)) {
             $output->writeln('<error>Could not determine the old namespace from wpmoo-config.yml or composer.json. Aborting.</error>');
@@ -294,19 +253,17 @@ class RenameCommand extends BaseCommand
             $newName,
             $oldTextDomain,
             $newTextDomain,
-            $oldAuthor,
-            $newAuthor,
-            $oldDescription,
-            $newDescription,
-            $oldLicense,
-            $newLicense,
-            $oldLicenseURI,
-            $newLicenseURI,
             $output
         );
 
         // Update namespaces
         $this->updateNamespaces($oldDir, $oldNamespace, $newNamespace, $output);
+
+        // Update plugin name throughout the codebase
+        $this->updatePluginNames($oldDir, $oldName, $newName, $output);
+
+        // Update additional references throughout the codebase
+        $this->updateGeneralReferences($oldDir, $oldName, $newName, $oldNamespace, $newNamespace, $output);
 
         // Update text domains
         $this->updateTextDomains($oldDir, $oldTextDomain, $newTextDomain, $output);
@@ -326,11 +283,7 @@ class RenameCommand extends BaseCommand
             $oldDir,
             $newName,
             $newNamespace,
-            $newTextDomain,
-            $newAuthor,
-            $newDescription,
-            $newLicense,
-            $newLicenseURI
+            $newTextDomain
         );
         $output->writeln("✓ Saved new project config to wpmoo-config.yml");
     }
@@ -347,11 +300,7 @@ class RenameCommand extends BaseCommand
         string $dir,
         string $newName,
         string $newNamespace,
-        string $newTextDomain,
-        string $newAuthor,
-        string $newDescription,
-        string $newLicense,
-        string $newLicenseURI
+        string $newTextDomain
     ) {
         $configFile = $dir . '/wpmoo-config.yml';
         $config = [];
@@ -362,10 +311,6 @@ class RenameCommand extends BaseCommand
         $config['project']['name'] = $newName;
         $config['project']['namespace'] = $newNamespace;
         $config['project']['text_domain'] = $newTextDomain;
-        $config['project']['author'] = $newAuthor;
-        $config['project']['description'] = $newDescription;
-        $config['project']['license'] = $newLicense;
-        $config['project']['license_uri'] = $newLicenseURI;
 
         file_put_contents($configFile, Yaml::dump($config, 2));
     }
@@ -401,14 +346,6 @@ class RenameCommand extends BaseCommand
         string $newPluginName,
         string $oldTextDomain,
         string $newTextDomain,
-        string $oldAuthor,
-        string $newAuthor,
-        string $oldDescription,
-        string $newDescription,
-        string $oldLicense,
-        string $newLicense,
-        string $oldLicenseURI,
-        string $newLicenseURI,
         OutputInterface $output
     ) {
         $content = file_get_contents($mainFile);
@@ -423,94 +360,39 @@ class RenameCommand extends BaseCommand
             $output->writeln("✓ Updated Plugin Name header in '{$mainFile}' (from undetermined to '{$newPluginName}')");
         }
 
-        // Update Description header
-        if (!empty($oldDescription) && $oldDescription !== $newDescription) {
-            $content = preg_replace('/^(Description:\s*)' . preg_quote($oldDescription, '/') . '$/m', '$1' . $newDescription, $content);
-            $output->writeln("✓ Updated Description header in '{$mainFile}'");
-        } elseif (empty($oldDescription) && !empty($newDescription) && preg_match('/^(Description:\s*)(.*)$/m', $content)) {
-            $content = preg_replace('/^(Description:\s*)(.*)$/m', '$1' . $newDescription, $content);
-            $output->writeln("✓ Updated Description header in '{$mainFile}' (from undetermined to '{$newDescription}')");
-        } elseif (empty($oldDescription) && !empty($newDescription) && !preg_match('/^(Description:\s*)(.*)$/m', $content)) {
-            // Add Description header after Plugin Name if it doesn't exist
-            $content = preg_replace(
-                '/^(Plugin Name:\s*' . preg_quote($newPluginName, '/') . ')$/m',
-                "$1\n * Description: {$newDescription}",
-                $content
-            );
-            $output->writeln("✓ Added Description header to '{$mainFile}'");
-        }
-
-
-        // Update Author header
-        if (!empty($oldAuthor) && $oldAuthor !== $newAuthor) {
-            $content = preg_replace('/^(Author:\s*)' . preg_quote($oldAuthor, '/') . '$/m', '$1' . $newAuthor, $content);
-            $output->writeln("✓ Updated Author header in '{$mainFile}'");
-        } elseif (empty($oldAuthor) && !empty($newAuthor) && preg_match('/^(Author:\s*)(.*)$/m', $content)) {
-            $content = preg_replace('/^(Author:\s*)(.*)$/m', '$1' . $newAuthor, $content);
-            $output->writeln("✓ Updated Author header in '{$mainFile}' (from undetermined to '{$newAuthor}')");
-        } elseif (empty($oldAuthor) && !empty($newAuthor) && !preg_match('/^(Author:\s*)(.*)$/m', $content)) {
-            // Add Author header after Description (or Plugin Name if Description doesn't exist)
-            $afterHeader = !empty($newDescription) ? 'Description:\s*' . preg_quote($newDescription, '/') : 'Plugin Name:\s*' . preg_quote($newPluginName, '/');
-            $content = preg_replace(
-                '/^(' . $afterHeader . ')$/m',
-                "$1\n * Author: {$newAuthor}",
-                $content
-            );
-            $output->writeln("✓ Added Author header to '{$mainFile}'");
-        }
-
-        // Update License header
-        if (!empty($oldLicense) && $oldLicense !== $newLicense) {
-            $content = preg_replace('/^(License:\s*)' . preg_quote($oldLicense, '/') . '$/m', '$1' . $newLicense, $content);
-            $output->writeln("✓ Updated License header in '{$mainFile}'");
-        } elseif (empty($oldLicense) && !empty($newLicense) && preg_match('/^(License:\s*)(.*)$/m', $content)) {
-            $content = preg_replace('/^(License:\s*)(.*)$/m', '$1' . $newLicense, $content);
-            $output->writeln("✓ Updated License header in '{$mainFile}' (from undetermined to '{$newLicense}')");
-        } elseif (empty($oldLicense) && !empty($newLicense) && !preg_match('/^(License:\s*)(.*)$/m', $content)) {
-            // Add License header after Author (or Description/Plugin Name if Author doesn't exist)
-            $afterHeader = !empty($newAuthor) ? 'Author:\s*' . preg_quote($newAuthor, '/') : (!empty($newDescription) ? 'Description:\s*' . preg_quote($newDescription, '/') : 'Plugin Name:\s*' . preg_quote($newPluginName, '/'));
-            $content = preg_replace(
-                '/^(' . $afterHeader . ')$/m',
-                "$1\n * License: {$newLicense}",
-                $content
-            );
-            $output->writeln("✓ Added License header to '{$mainFile}'");
-        }
-
-        // Update License URI header
-        if (!empty($oldLicenseURI) && $oldLicenseURI !== $newLicenseURI) {
-            $content = preg_replace('/^(License URI:\s*)' . preg_quote($oldLicenseURI, '/') . '$/m', '$1' . $newLicenseURI, $content);
-            $output->writeln("✓ Updated License URI header in '{$mainFile}'");
-        } elseif (empty($oldLicenseURI) && !empty($newLicenseURI) && preg_match('/^(License URI:\s*)(.*)$/m', $content)) {
-            $content = preg_replace('/^(License URI:\s*)(.*)$/m', '$1' . $newLicenseURI, $content);
-            $output->writeln("✓ Updated License URI header in '{$mainFile}' (from undetermined to '{$newLicenseURI}')");
-        } elseif (empty($oldLicenseURI) && !empty($newLicenseURI) && !preg_match('/^(License URI:\s*)(.*)$/m', $content)) {
-            // Add License URI header after License (or Author/Description/Plugin Name)
-            $afterHeader = !empty($newLicense) ? 'License:\s*' . preg_quote($newLicense, '/') : (!empty($newAuthor) ? 'Author:\s*' . preg_quote($newAuthor, '/') : (!empty($newDescription) ? 'Description:\s*' . preg_quote($newDescription, '/') : 'Plugin Name:\s*' . preg_quote($newPluginName, '/')));
-            $content = preg_replace(
-                '/^(' . $afterHeader . ')$/m',
-                "$1\n * License URI: {$newLicenseURI}",
-                $content
-            );
-            $output->writeln("✓ Added License URI header to '{$mainFile}'");
-        }
-
-        // Update Text Domain header
+        // Update Text Domain header - WordPress uses a specific format for plugin headers
+        // Text Domain can appear with various spacing formats in the plugin header
+        $textDomainPattern = '/^(\s*\*\s*Text Domain:\s*)' . preg_quote($oldTextDomain, '/') . '(\s*)$/m';
         if (!empty($oldTextDomain) && $oldTextDomain !== $newTextDomain) {
-            $content = preg_replace('/^(Text Domain:\s*)' . preg_quote($oldTextDomain, '/') . '$/m', '$1' . $newTextDomain, $content);
+            $content = preg_replace($textDomainPattern, '${1}' . $newTextDomain . '${2}', $content);
             $output->writeln("✓ Updated Text Domain header in '{$mainFile}'");
-        } elseif (empty($oldTextDomain) && preg_match('/^(Text Domain:\s*)(.*)$/m', $content)) {
-            $content = preg_replace('/^(Text Domain:\s*)(.*)$/m', '$1' . $newTextDomain, $content);
+        } elseif (empty($oldTextDomain) && preg_match($textDomainPattern, $content)) {
+            // This case shouldn't normally happen since oldTextDomain is fetched from the file,
+            // but handling for completeness
+            $content = preg_replace($textDomainPattern, '${1}' . $newTextDomain . '${2}', $content);
             $output->writeln("✓ Updated Text Domain header in '{$mainFile}' (from undetermined to '{$newTextDomain}')");
-        } elseif (empty($oldTextDomain) && !empty($newTextDomain) && !preg_match('/^(Text Domain:\s*)(.*)$/m', $content)) {
-            // If no Text Domain header exists, add it after License URI (or License/Author/Description/Plugin Name)
-            $afterHeader = !empty($newLicenseURI) ? 'License URI:\s*' . preg_quote($newLicenseURI, '/') : (!empty($newLicense) ? 'License:\s*' . preg_quote($newLicense, '/') : (!empty($newAuthor) ? 'Author:\s*' . preg_quote($newAuthor, '/') : (!empty($newDescription) ? 'Description:\s*' . preg_quote($newDescription, '/') : 'Plugin Name:\s*' . preg_quote($newPluginName, '/'))));
-            $content = preg_replace(
-                '/^(' . $afterHeader . ')$/m',
-                "$1\n * Text Domain: {$newTextDomain}",
-                $content
-            );
-            $output->writeln("✓ Added Text Domain header to '{$mainFile}'");
+        } elseif (!preg_match($textDomainPattern, $content) && !empty($newTextDomain)) {
+            // If no Text Domain header exists, add it after Plugin Name in the header
+            $pluginNamePattern = '/^(\s*\*\s*Plugin Name:\s*' . preg_quote($oldPluginName, '/') . ')(\s*)$/m';
+            if (preg_match($pluginNamePattern, $content)) {
+                $content = preg_replace(
+                    $pluginNamePattern,
+                    "${1}${2}\n * Text Domain: {$newTextDomain}",
+                    $content
+                );
+                $output->writeln("✓ Added Text Domain header to '{$mainFile}'");
+            } else {
+                // Alternative: try to find the Plugin Name in the new format
+                $pluginNamePattern = '/^(\s*\*\s*Plugin Name:\s*' . preg_quote($newPluginName, '/') . ')(\s*)$/m';
+                if (preg_match($pluginNamePattern, $content)) {
+                    $content = preg_replace(
+                        $pluginNamePattern,
+                        "${1}${2}\n * Text Domain: {$newTextDomain}",
+                        $content
+                    );
+                    $output->writeln("✓ Added Text Domain header to '{$mainFile}'");
+                }
+            }
         }
 
 
@@ -543,6 +425,9 @@ class RenameCommand extends BaseCommand
                 [$newNamespace . '\\', 'namespace ' . $newNamespace . ';'],
                 $content
             );
+
+            // Also update namespace in docblocks (like @package WPMooStarter)
+            $newContent = preg_replace('/(@package\s+)' . preg_quote($oldNamespace, '/') . '/', '${1}' . $newNamespace, $newContent);
 
             if ($content !== $newContent) {
                 file_put_contents($path, $newContent);
@@ -583,6 +468,92 @@ class RenameCommand extends BaseCommand
             if ($content !== $newContent) {
                 file_put_contents($path, $newContent);
                 $output->writeln("✓ Updated text domain in '{$path}' (from '{$oldTextDomain}' to '{$newTextDomain}')");
+            }
+        }
+    }
+
+    /**
+     * Updates general references throughout the codebase.
+     *
+     * @param string $dir The directory to process.
+     * @param string $oldPluginName The old plugin name.
+     * @param string $newPluginName The new plugin name.
+     * @param string $oldNamespace The old namespace.
+     * @param string $newNamespace The new namespace.
+     * @param OutputInterface $output The output interface.
+     */
+    private function updateGeneralReferences(string $dir, string $oldPluginName, string $newPluginName, string $oldNamespace, string $newNamespace, OutputInterface $output)
+    {
+        if (empty($oldPluginName) || empty($newPluginName) || $oldPluginName === $newPluginName) {
+            return;
+        }
+
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
+        foreach ($iterator as $file) {
+            if ($file->isDir() || ($file->getExtension() !== 'php' && $file->getExtension() !== 'js' && $file->getExtension() !== 'txt' && $file->getExtension() !== 'html' && $file->getExtension() !== 'css' && $file->getExtension() !== 'md')) {
+                continue;
+            }
+
+            $path = $file->getRealPath();
+            $content = file_get_contents($path);
+            $newContent = $content;
+
+            // Update @package references (both old plugin name and old namespace)
+            $newContent = preg_replace('/(@package\s+)' . preg_quote($oldNamespace, '/') . '/', '${1}' . $newNamespace, $newContent);
+            $newContent = preg_replace('/(@package\s+)' . preg_quote($oldPluginName, '/') . '/', '${1}' . $newPluginName, $newContent);
+
+            // Update @since, @version, etc. references if they contain the old plugin name
+            $newContent = preg_replace('/(@since\s+.*?)(?<!\w)' . preg_quote($oldPluginName, '/') . '(?!\w)/', '${1}' . $newPluginName, $newContent);
+            $newContent = preg_replace('/(@version\s+.*?)(?<!\w)' . preg_quote($oldPluginName, '/') . '(?!\w)/', '${1}' . $newPluginName, $newContent);
+
+            // Update any other references to the old plugin name that might appear in comments/docblocks
+            // Make sure we don't replace parts of other words
+            $pattern = '/(?<!\w)' . preg_quote($oldPluginName, '/') . '(?!\w)/';
+            $newContent = preg_replace($pattern, $newPluginName, $newContent);
+
+            if ($content !== $newContent) {
+                file_put_contents($path, $newContent);
+                $output->writeln("✓ Updated general references in '{$path}'");
+            }
+        }
+    }
+
+    /**
+     * Updates the plugin names in all PHP files.
+     *
+     * @param string $dir The directory to process.
+     * @param string $oldPluginName The old plugin name.
+     * @param string $newPluginName The new plugin name.
+     * @param OutputInterface $output The output interface.
+     */
+    private function updatePluginNames(string $dir, string $oldPluginName, string $newPluginName, OutputInterface $output)
+    {
+        if (empty($oldPluginName) || empty($newPluginName) || $oldPluginName === $newPluginName) {
+            return;
+        }
+
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
+        foreach ($iterator as $file) {
+            if ($file->isDir() || ($file->getExtension() !== 'php' && $file->getExtension() !== 'js' && $file->getExtension() !== 'txt' && $file->getExtension() !== 'html' && $file->getExtension() !== 'css')) {
+                continue;
+            }
+
+            $path = $file->getRealPath();
+            $content = file_get_contents($path);
+
+            // Replace old plugin name with new plugin name, preserving case where appropriate
+            $newContent = $content;
+
+            // Replace in comments (like package, since, version tags)
+            $newContent = preg_replace('/(@package\s+)' . preg_quote($oldPluginName, '/') . '/', '${1}' . $newPluginName, $newContent);
+            $newContent = preg_replace('/(@subpackage\s+)' . preg_quote($oldPluginName, '/') . '/', '${1}' . $newPluginName, $newContent);
+
+            // Also replace the "WPMoo Starter" style full name
+            $newContent = str_replace($oldPluginName, $newPluginName, $newContent);
+
+            if ($content !== $newContent) {
+                file_put_contents($path, $newContent);
+                $output->writeln("✓ Updated plugin name in '{$path}' (from '{$oldPluginName}' to '{$newPluginName}')");
             }
         }
     }
