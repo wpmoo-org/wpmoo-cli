@@ -353,10 +353,14 @@ class RenameCommand extends BaseCommand
 
         // Update Plugin Name header
         if (!empty($oldPluginName) && $oldPluginName !== $newPluginName) {
-            $content = preg_replace('/^(Plugin Name:\s*)' . preg_quote($oldPluginName, '/') . '$/m', '$1' . $newPluginName, $content);
+            $content = preg_replace_callback('/^(Plugin Name:\s*)' . preg_quote($oldPluginName, '/') . '$/m', function ($matches) use ($newPluginName) {
+                return $matches[1] . $newPluginName;
+            }, $content);
             $output->writeln("✓ Updated Plugin Name header in '{$mainFile}'");
         } elseif (empty($oldPluginName) && preg_match('/^(Plugin Name:\s*)(.*)$/m', $content)) {
-            $content = preg_replace('/^(Plugin Name:\s*)(.*)$/m', '$1' . $newPluginName, $content);
+            $content = preg_replace_callback('/^(Plugin Name:\s*)(.*)$/m', function ($matches) use ($newPluginName) {
+                return $matches[1] . $newPluginName;
+            }, $content);
             $output->writeln("✓ Updated Plugin Name header in '{$mainFile}' (from undetermined to '{$newPluginName}')");
         }
 
@@ -364,32 +368,32 @@ class RenameCommand extends BaseCommand
         // Text Domain can appear with various spacing formats in the plugin header
         $textDomainPattern = '/^(\s*\*\s*Text Domain:\s*)' . preg_quote($oldTextDomain, '/') . '(\s*)$/m';
         if (!empty($oldTextDomain) && $oldTextDomain !== $newTextDomain) {
-            $content = preg_replace($textDomainPattern, '${1}' . $newTextDomain . '${2}', $content);
+            $content = preg_replace_callback($textDomainPattern, function ($matches) use ($newTextDomain) {
+                return $matches[1] . $newTextDomain . $matches[2];
+            }, $content);
             $output->writeln("✓ Updated Text Domain header in '{$mainFile}'");
         } elseif (empty($oldTextDomain) && preg_match($textDomainPattern, $content)) {
             // This case shouldn't normally happen since oldTextDomain is fetched from the file,
             // but handling for completeness
-            $content = preg_replace($textDomainPattern, '${1}' . $newTextDomain . '${2}', $content);
+            $content = preg_replace_callback($textDomainPattern, function ($matches) use ($newTextDomain) {
+                return $matches[1] . $newTextDomain . $matches[2];
+            }, $content);
             $output->writeln("✓ Updated Text Domain header in '{$mainFile}' (from undetermined to '{$newTextDomain}')");
         } elseif (!preg_match($textDomainPattern, $content) && !empty($newTextDomain)) {
             // If no Text Domain header exists, add it after Plugin Name in the header
             $pluginNamePattern = '/^(\s*\*\s*Plugin Name:\s*' . preg_quote($oldPluginName, '/') . ')(\s*)$/m';
             if (preg_match($pluginNamePattern, $content)) {
-                $content = preg_replace(
-                    $pluginNamePattern,
-                    "${1}${2}\n * Text Domain: {$newTextDomain}",
-                    $content
-                );
+                $content = preg_replace_callback($pluginNamePattern, function ($matches) use ($newTextDomain) {
+                    return $matches[1] . $matches[2] . "\n * Text Domain: " . $newTextDomain;
+                }, $content);
                 $output->writeln("✓ Added Text Domain header to '{$mainFile}'");
             } else {
                 // Alternative: try to find the Plugin Name in the new format
                 $pluginNamePattern = '/^(\s*\*\s*Plugin Name:\s*' . preg_quote($newPluginName, '/') . ')(\s*)$/m';
                 if (preg_match($pluginNamePattern, $content)) {
-                    $content = preg_replace(
-                        $pluginNamePattern,
-                        "${1}${2}\n * Text Domain: {$newTextDomain}",
-                        $content
-                    );
+                    $content = preg_replace_callback($pluginNamePattern, function ($matches) use ($newTextDomain) {
+                        return $matches[1] . $matches[2] . "\n * Text Domain: " . $newTextDomain;
+                    }, $content);
                     $output->writeln("✓ Added Text Domain header to '{$mainFile}'");
                 }
             }
@@ -427,7 +431,9 @@ class RenameCommand extends BaseCommand
             );
 
             // Also update namespace in docblocks (like @package WPMooStarter)
-            $newContent = preg_replace('/(@package\s+)' . preg_quote($oldNamespace, '/') . '/', '${1}' . $newNamespace, $newContent);
+            $newContent = preg_replace_callback('/(@package\s+)' . preg_quote($oldNamespace, '/') . '/', function ($matches) use ($newNamespace) {
+                return $matches[1] . $newNamespace;
+            }, $newContent);
 
             if ($content !== $newContent) {
                 file_put_contents($path, $newContent);
@@ -499,12 +505,20 @@ class RenameCommand extends BaseCommand
             $newContent = $content;
 
             // Update @package references (both old plugin name and old namespace)
-            $newContent = preg_replace('/(@package\s+)' . preg_quote($oldNamespace, '/') . '/', '${1}' . $newNamespace, $newContent);
-            $newContent = preg_replace('/(@package\s+)' . preg_quote($oldPluginName, '/') . '/', '${1}' . $newPluginName, $newContent);
+            $newContent = preg_replace_callback('/(@package\s+)' . preg_quote($oldNamespace, '/') . '/', function ($matches) use ($newNamespace) {
+                return $matches[1] . $newNamespace;
+            }, $newContent);
+            $newContent = preg_replace_callback('/(@package\s+)' . preg_quote($oldPluginName, '/') . '/', function ($matches) use ($newPluginName) {
+                return $matches[1] . $newPluginName;
+            }, $newContent);
 
             // Update @since, @version, etc. references if they contain the old plugin name
-            $newContent = preg_replace('/(@since\s+.*?)(?<!\w)' . preg_quote($oldPluginName, '/') . '(?!\w)/', '${1}' . $newPluginName, $newContent);
-            $newContent = preg_replace('/(@version\s+.*?)(?<!\w)' . preg_quote($oldPluginName, '/') . '(?!\w)/', '${1}' . $newPluginName, $newContent);
+            $newContent = preg_replace_callback('/(@since\s+.*?)(?<!\w)' . preg_quote($oldPluginName, '/') . '(?!\w)/', function ($matches) use ($newPluginName) {
+                return $matches[1] . $newPluginName;
+            }, $newContent);
+            $newContent = preg_replace_callback('/(@version\s+.*?)(?<!\w)' . preg_quote($oldPluginName, '/') . '(?!\w)/', function ($matches) use ($newPluginName) {
+                return $matches[1] . $newPluginName;
+            }, $newContent);
 
             // Update any other references to the old plugin name that might appear in comments/docblocks
             // Make sure we don't replace parts of other words
@@ -545,8 +559,12 @@ class RenameCommand extends BaseCommand
             $newContent = $content;
 
             // Replace in comments (like package, since, version tags)
-            $newContent = preg_replace('/(@package\s+)' . preg_quote($oldPluginName, '/') . '/', '${1}' . $newPluginName, $newContent);
-            $newContent = preg_replace('/(@subpackage\s+)' . preg_quote($oldPluginName, '/') . '/', '${1}' . $newPluginName, $newContent);
+            $newContent = preg_replace_callback('/(@package\s+)' . preg_quote($oldPluginName, '/') . '/', function ($matches) use ($newPluginName) {
+                return $matches[1] . $newPluginName;
+            }, $newContent);
+            $newContent = preg_replace_callback('/(@subpackage\s+)' . preg_quote($oldPluginName, '/') . '/', function ($matches) use ($newPluginName) {
+                return $matches[1] . $newPluginName;
+            }, $newContent);
 
             // Also replace the "WPMoo Starter" style full name
             $newContent = str_replace($oldPluginName, $newPluginName, $newContent);
@@ -579,13 +597,19 @@ class RenameCommand extends BaseCommand
 
         // Update Plugin Name
         if (!empty($oldPluginName) && $oldPluginName !== $newPluginName) {
-            $content = preg_replace('/(=== )' . preg_quote($oldPluginName, '/') . '( ===)/', '$1' . $newPluginName . '$2', $content);
-            $content = preg_replace('/(== )' . preg_quote($oldPluginName, '/') . '( ==)/', '$1' . $newPluginName . '$2', $content);
+            $content = preg_replace_callback('/(=== )' . preg_quote($oldPluginName, '/') . '( ===)/', function ($matches) use ($newPluginName) {
+                return $matches[1] . $newPluginName . $matches[2];
+            }, $content);
+            $content = preg_replace_callback('/(== )' . preg_quote($oldPluginName, '/') . '( ==)/', function ($matches) use ($newPluginName) {
+                return $matches[1] . $newPluginName . $matches[2];
+            }, $content);
         }
 
         // Update Stable tag
         if (!empty($oldTextDomain) && $oldTextDomain !== $newTextDomain) {
-            $content = preg_replace('/(Stable tag:\s*)' . preg_quote($oldTextDomain, '/') . '/', '$1' . $newTextDomain, $content);
+            $content = preg_replace_callback('/(Stable tag:\s*)' . preg_quote($oldTextDomain, '/') . '/', function ($matches) use ($newTextDomain) {
+                return $matches[1] . $newTextDomain;
+            }, $content);
         }
 
         // General replacement for old plugin name to new plugin name
