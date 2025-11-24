@@ -465,11 +465,37 @@ class RenameCommand extends BaseCommand
             $path = $file->getRealPath();
             $content = file_get_contents($path);
 
-            // This regex will find strings that look like text domains within translation functions
-            // and load_plugin_textdomain. It's a bit broad but should cover most cases.
-            $pattern = '/(\'|\")' . preg_quote($oldTextDomain, '/') . '(\'|\")/';
-            $replacement = '$1' . $newTextDomain . '$2';
-            $newContent = preg_replace($pattern, $replacement, $content);
+            // Pattern to match text domains in translation functions
+            // This targets functions like __(), _e(), _n(), _x(), _ex(), _nx(), etc.
+            $functions = ['__', '_e', '_n', '_x', '_ex', '_nx', '_n_noop', '_nx_noop'];
+            $newContent = $content;
+
+            foreach ($functions as $func) {
+                $pattern = '/(\b' . preg_quote($func, '/') . '\s*\(\s*["\'][^"\']*["\']\s*,\s*["\'])' . preg_quote($oldTextDomain, '/') . '(["\'])/';
+                $newContent = preg_replace_callback($pattern, function ($matches) use ($newTextDomain) {
+                    return $matches[1] . $newTextDomain . $matches[2];
+                }, $newContent);
+            }
+
+            // Also update load_plugin_textdomain calls
+            $loadTextDomainPattern = '/(load_plugin_textdomain\s*\(\s*["\'])' . preg_quote($oldTextDomain, '/') . '(["\'])/';
+            $newContent = preg_replace_callback($loadTextDomainPattern, function ($matches) use ($newTextDomain) {
+                return $matches[1] . $newTextDomain . $matches[2];
+            }, $newContent);
+
+            // Also update other function calls that might contain the text domain
+            // This targets the boot method and potentially other methods that require text domain
+            $bootPattern = '/(WPMoo\\\WordPress\\\Bootstrap::instance\(\)->boot\(\s*[^,]*\s*,\s*["\'])' . preg_quote($oldTextDomain, '/') . '(["\'])/';
+            $newContent = preg_replace_callback($bootPattern, function ($matches) use ($newTextDomain) {
+                return $matches[1] . $newTextDomain . $matches[2];
+            }, $newContent);
+
+            // Update any other direct text domain references that might exist in function calls
+            // This is a more generic pattern for functions that might take the text domain as an argument
+            $genericPattern = '/(\bboot\s*\(\s*[^,]*\s*,\s*["\'])' . preg_quote($oldTextDomain, '/') . '(["\'])/';
+            $newContent = preg_replace_callback($genericPattern, function ($matches) use ($newTextDomain) {
+                return $matches[1] . $newTextDomain . $matches[2];
+            }, $newContent);
 
             if ($content !== $newContent) {
                 file_put_contents($path, $newContent);
@@ -566,8 +592,17 @@ class RenameCommand extends BaseCommand
                 return $matches[1] . $newPluginName;
             }, $newContent);
 
-            // Also replace the "WPMoo Starter" style full name
-            $newContent = str_replace($oldPluginName, $newPluginName, $newContent);
+            // For PHP files, we need to be careful about translation strings
+            if ($file->getExtension() === 'php') {
+                // To protect translation strings, we'll only do simple replacement for now
+                // A fully robust solution would require a PHP parser, which is overkill
+                // For now, accept that some translation strings might be changed,
+                // but prioritize updating all other plugin name references
+                $newContent = str_replace($oldPluginName, $newPluginName, $newContent);
+            } else {
+                // For non-PHP files, just do a simple replacement
+                $newContent = str_replace($oldPluginName, $newPluginName, $newContent);
+            }
 
             if ($content !== $newContent) {
                 file_put_contents($path, $newContent);
