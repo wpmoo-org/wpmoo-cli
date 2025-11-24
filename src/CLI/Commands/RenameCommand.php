@@ -286,6 +286,92 @@ class RenameCommand extends BaseCommand
             $newTextDomain
         );
         $output->writeln("✓ Saved new project config to wpmoo-config.yml");
+
+        // Run composer dump-autoload to refresh the autoloader with new namespace
+        $this->runComposerDumpAutoload($oldDir, $output);
+
+        // Inform the user about plugin reactivation if file was renamed
+        $this->informAboutPluginReactivation($output, $oldMainFile, $newMainFile);
+    }
+
+    /**
+     * Runs composer dump-autoload to refresh the autoloader after namespace changes.
+     *
+     * @param string $dir The project directory.
+     * @param OutputInterface $output The output interface.
+     */
+    private function runComposerDumpAutoload(string $dir, OutputInterface $output): void
+    {
+        // Check if composer.json exists in the project directory
+        $composerJsonPath = $dir . '/composer.json';
+        if (!file_exists($composerJsonPath)) {
+            $output->writeln("<comment>→ No composer.json found, skipping autoload dump.</comment>");
+            return;
+        }
+
+        $output->writeln("→ Running composer dump-autoload...");
+
+        // Check if composer is available
+        $resultCode = 0;
+        $outputLines = [];
+
+        // Using @ to suppress errors in case composer is not found
+        $hasComposer = !empty(trim(shell_exec('command -v composer')));
+        if ($hasComposer) {
+            // Run composer dump-autoload in the project directory
+            $command = 'cd ' . escapeshellarg($dir) . ' && composer dump-autoload';
+            exec($command, $outputLines, $resultCode);
+        } else {
+            // Check if composer.phar exists in the project directory
+            $composerPharPath = $dir . '/composer.phar';
+            if (file_exists($composerPharPath)) {
+                $command = 'cd ' . escapeshellarg($dir) . ' && php composer.phar dump-autoload';
+                exec($command, $outputLines, $resultCode);
+            } else {
+                $output->writeln('<error>→ Composer not found and no composer.phar in project directory. Please run composer dump-autoload manually.</error>');
+                return;
+            }
+        }
+
+        if ($resultCode === 0) {
+            $output->writeln('<info>✓ Successfully updated autoloader.</info>');
+        } else {
+            $output->writeln('<error>→ Failed to run composer dump-autoload. Please run it manually.</error>');
+            if (!empty($outputLines)) {
+                foreach ($outputLines as $line) {
+                    $output->writeln("  <comment>{$line}</comment>");
+                }
+            }
+        }
+    }
+
+    /**
+     * Informs the user about plugin reactivation and directory renaming after renaming.
+     *
+     * @param OutputInterface $output The output interface.
+     * @param string $oldMainFile The old main plugin file path.
+     * @param string $newMainFile The new main plugin file path.
+     */
+    private function informAboutPluginReactivation(OutputInterface $output, string $oldMainFile, string $newMainFile): void
+    {
+        // Check if the main plugin file was actually renamed
+        $oldFilename = basename($oldMainFile);
+        $newFilename = basename($newMainFile);
+
+        if ($oldFilename !== $newFilename) {
+            $output->writeln("");
+            $output->writeln("<comment>⚠️  IMPORTANT NOTES ABOUT RENAME:</comment>");
+            $output->writeln("<info>→ Plugin file has been renamed from '{$oldFilename}' to '{$newFilename}'.</info>");
+            $output->writeln("<info>→ If the plugin was active in WordPress, it may now show a fatal error.</info>");
+            $output->writeln("<info>→ WordPress caches plugin paths, so you must deactivate and reactivate the plugin</info>");
+            $output->writeln("<info>  in WordPress admin to update its internal references.</info>");
+            $output->writeln("<info>→ If activation fails after reactivation, you may need to manually update the</info>");
+            $output->writeln("<info>  wp_options table ('active_plugins' option) and wp_plugin_paths cache.</info>");
+            $output->writeln("<info>→ If you want the directory name to match the new plugin name, you should manually rename</info>");
+            $output->writeln("<info>  the plugin directory and update any references (e.g., in git, symlinks, etc.).</info>");
+            $output->writeln("<info>→ Remember to update any deployment configurations if the directory name changes.</info>");
+            $output->writeln("");
+        }
     }
 
     /**
