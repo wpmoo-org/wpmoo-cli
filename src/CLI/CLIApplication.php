@@ -39,16 +39,90 @@ class CLIApplication extends Application
         $version = $this->getVersion();
         parent::__construct('WPMoo CLI', $version);
 
-        // Register built-in commands.
+        // Register commands based on project context.
+        $this->registerCommandsByContext();
+    }
+
+    /**
+     * Register commands based on the current project context.
+     */
+    private function registerCommandsByContext(): void
+    {
+        $context = $this->identifyProjectContext();
+
+        // Always register essential commands
         $commands = array(
             new InfoCommand(),
-            new VersionCommand(),
-            new RenameCommand(),
         );
+
+        // Add commands based on context
+        switch ($context) {
+            case 'wpmoo-cli':
+                // Only Info and List commands are active in wpmoo-cli
+                // List command is added by default by Symfony Console
+                break;
+            case 'wpmoo':
+                // In wpmoo framework, add version command
+                $commands[] = new VersionCommand();
+                break;
+            case 'wpmoo-plugin':
+            default:
+                // For starter or other WPMoo-based plugins, add all commands
+                $commands[] = new VersionCommand();
+                $commands[] = new RenameCommand();
+                break;
+        }
 
         foreach ($commands as $command) {
             $this->add($command);
         }
+    }
+
+    /**
+     * Identify the project context based on current directory and composer.json.
+     *
+     * @return string Context: 'wpmoo-cli', 'wpmoo', or 'wpmoo-plugin'
+     */
+    private function identifyProjectContext(): string
+    {
+        $cwd = getcwd();
+        if (!$cwd) {
+            return 'wpmoo-plugin'; // Default to plugin behavior
+        }
+
+        $composerFile = $cwd . '/composer.json';
+
+        if (file_exists($composerFile)) {
+            $composerData = json_decode(file_get_contents($composerFile), true);
+            if (isset($composerData['name'])) {
+                $packageName = $composerData['name'];
+
+                if ($packageName === 'wpmoo/wpmoo-cli') {
+                    return 'wpmoo-cli';
+                } elseif ($packageName === 'wpmoo/wpmoo') {
+                    return 'wpmoo';
+                }
+            }
+        }
+
+        // Check if this looks like a WPMoo-based plugin by looking for WPMoo usage
+        $phpFiles = glob($cwd . '/*.php');
+        if ($phpFiles) {
+            foreach ($phpFiles as $file) {
+                $content = file_get_contents($file);
+                // Look for WPMoo in plugin header or usage
+                if (
+                    preg_match('/(wpmoo|WPMoo)/i', $content) &&
+                    (preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
+                     preg_match('/^[ \t\/*#@]*Theme Name:/im', $content))
+                ) {
+                    return 'wpmoo-plugin';
+                }
+            }
+        }
+
+        // Default to plugin behavior if we can't clearly determine
+        return 'wpmoo-plugin';
     }
 
     public function getHelp(): string
