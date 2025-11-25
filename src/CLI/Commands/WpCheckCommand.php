@@ -103,22 +103,22 @@ class WpCheckCommand extends BaseCommand
             }
         }
 
-        $output->writeln('<comment>WordPress Root: ' . $wpRoot . '</comment>');
+        $output->writeln('<important>WordPress Root: ' . $wpRoot . '</important>');
         $output->writeln('No Strict: ' . ($noStrict ? 'Yes' : 'No'));
         $output->writeln('Ignore Codes: ' . ($ignoreCodes ?: 'None'));
 
         $plugins = $this->findPlugins($wpRoot);
 
         if (empty($plugins)) {
-            $output->writeln('<comment>No WPMoo-based plugins found in the WordPress installation.</comment>');
+            $output->writeln('<important>No WPMoo-based plugins found in the WordPress installation.</important>');
         } else {
-            $output->writeln('<comment>Detected Plugins:</comment>');
+            $output->writeln('<important>Detected Plugins:</important>');
             foreach ($plugins as $pluginDir) {
                 $output->writeln(' - ' . $pluginDir);
                 $mainPluginFile = $this->locateMainPluginFile($pluginDir);
                 if ($mainPluginFile) {
                     $headers = $this->parsePluginHeader($mainPluginFile);
-                    $output->writeln('   <comment>Plugin Headers:</comment>');
+                    $output->writeln('   <important>Plugin Headers:</important>');
                     foreach ($headers as $key => $value) {
                         $output->writeln('     - ' . $key . ': ' . $value);
                     }
@@ -130,12 +130,12 @@ class WpCheckCommand extends BaseCommand
                 $readmeFile = $pluginDir . '/readme.txt';
                 if ($this->filesystem->exists($readmeFile)) {
                     $readmeData = $this->parseReadmeTxt($readmeFile);
-                    $output->writeln('   <comment>Readme.txt Data:</comment>');
+                    $output->writeln('   <important>Readme.txt Data:</important>');
                     foreach ($readmeData as $key => $value) {
                         $output->writeln('     - ' . $key . ': ' . $value);
                     }
                 } else {
-                    $output->writeln('   <comment>Readme.txt not found.</comment>');
+                    $output->writeln('   <important>Readme.txt not found.</important>');
                     $readmeData = $this->getEmptyReadmeData();
                 }
 
@@ -438,15 +438,15 @@ class WpCheckCommand extends BaseCommand
         bool $noStrict,
         ?string $ignoreCodes
     ): void {
-        $output->writeln('   <comment>Running compatibility checks:</comment>');
+        $output->writeln('   <important>Running compatibility checks:</important>');
 
         $ignoredCodesArray = $ignoreCodes ? explode(',', $ignoreCodes) : [];
 
         // Check 1: Plugin Name contains "WPMoo"
         if (isset($pluginHeaders['Plugin Name']) && strpos($pluginHeaders['Plugin Name'], 'WPMoo') === false) {
-            $this->outputCheckResult($output, 'P001', 'Plugin name should contain "WPMoo".', 'warning', $ignoredCodesArray, $noStrict);
+            $this->outputCheckResult($output, 'P001', 'Plugin name should contain <info>WPMoo</info>.', 'warning', $ignoredCodesArray, $noStrict);
         } else {
-            $output->writeln('     - <info>P001: Plugin name contains "WPMoo".</info>');
+            $output->writeln('     - <info>P001: Plugin name contains <info>WPMoo</info>.</info>');
         }
 
         // Check 2: Composer.json exists and is valid
@@ -454,17 +454,17 @@ class WpCheckCommand extends BaseCommand
         if ($this->filesystem->exists($composerJsonPath)) {
             $composerContent = file_get_contents($composerJsonPath);
             if ($composerContent === false) {
-                $this->outputCheckResult($output, 'P002', 'Could not read composer.json.', 'error', $ignoredCodesArray, $noStrict);
+                $this->outputCheckResult($output, 'P002', 'Could not read <info>composer.json</info>.', 'error', $ignoredCodesArray, $noStrict);
             } else {
                 $composerData = json_decode($composerContent, true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
-                    $this->outputCheckResult($output, 'P003', 'Invalid composer.json: ' . json_last_error_msg(), 'error', $ignoredCodesArray, $noStrict, !$noStrict);
+                    $this->outputCheckResult($output, 'P003', 'Invalid <info>composer.json</info>: ' . json_last_error_msg(), 'error', $ignoredCodesArray, $noStrict, !$noStrict);
                 } else {
-                    $output->writeln('     - <info>P002: composer.json exists and is valid.</info>');
+                    $output->writeln('     - <info>P002: <info>composer.json</info> exists and is valid.</info>');
                 }
             }
         } else {
-            $this->outputCheckResult($output, 'P004', 'composer.json not found.', 'warning', $ignoredCodesArray, $noStrict);
+            $this->outputCheckResult($output, 'P004', '<info>composer.json</info> not found.', 'warning', $ignoredCodesArray, $noStrict);
         }
 
         // Add more checks here as needed
@@ -491,11 +491,11 @@ class WpCheckCommand extends BaseCommand
         bool $alwaysShow = false
     ): void {
         if ($alwaysShow || !in_array($code, $ignoredCodesArray, true) && !($noStrict && $type === 'warning')) {
-            $output->writeln("     - <{$type}>{$code}: {$message}</{$type}>");
+            $output->writeln("     - <{$type}><info>{$code}</info>: {$message}</{$type}>");
         } elseif ($noStrict && $type === 'warning') {
-            $output->writeln("     - <comment>{$code}: {$message} (Ignored due to --no-strict)</comment>");
+            $output->writeln("     - <important><info>{$code}</info>: {$message} (Ignored due to --no-strict)</important>");
         } elseif (in_array($code, $ignoredCodesArray, true)) {
-            $output->writeln("     - <comment>{$code}: {$message} (Ignored by --ignore-codes)</comment>");
+            $output->writeln("     - <important><info>{$code}</info>: {$message} (Ignored by --ignore-codes)</important>");
         }
     }
 }

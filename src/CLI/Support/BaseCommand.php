@@ -15,6 +15,7 @@
 namespace WPMoo\CLI\Support;
 
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use WPMoo\CLI\Contracts\CommandInterface;
@@ -33,6 +34,12 @@ abstract class BaseCommand extends Command implements CommandInterface
      */
     final protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        // Define custom styles
+        $formatter = $output->getFormatter();
+        $formatter->setStyle('important', new OutputFormatterStyle('yellow', null, ['bold']));
+        $formatter->setStyle('question', new OutputFormatterStyle('yellow'));
+
+
         return $this->handleExecute($input, $output);
     }
 
