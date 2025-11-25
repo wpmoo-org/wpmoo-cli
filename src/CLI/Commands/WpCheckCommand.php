@@ -85,7 +85,7 @@ class WpCheckCommand extends BaseCommand
 
         if (!$wpRoot) {
             $helper   = $this->getHelper('question');
-            $question = new Question('<question>Could not detect WordPress root. Please provide the path to your WordPress installation: </question>', null);
+            $question = new Question('<important>Could not detect WordPress root. Please provide the path to your WordPress installation: </important>', null);
 
             while (true) {
                 $wpRoot = $helper->ask($input, $output, $question);

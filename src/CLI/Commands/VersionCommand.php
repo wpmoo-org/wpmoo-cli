@@ -229,7 +229,7 @@ class VersionCommand extends BaseCommand
 
         // Create choice question
         $question = new ChoiceQuestion(
-            '<comment>Select version increment type:</comment>',
+            '<question>Select version increment type:</question>',
             $options,
             'patch' // Default to patch increment
         );

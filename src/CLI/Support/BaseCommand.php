@@ -34,10 +34,14 @@ abstract class BaseCommand extends Command implements CommandInterface
      */
     final protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        // Force output decoration to ensure colors are always displayed
+        $output->setDecorated(true);
+
         // Define custom styles
         $formatter = $output->getFormatter();
         $formatter->setStyle('important', new OutputFormatterStyle('yellow', null, ['bold']));
-        $formatter->setStyle('question', new OutputFormatterStyle('yellow'));
+        $formatter->setStyle('question', new OutputFormatterStyle('black', 'yellow'));
+        $formatter->setStyle('warning', new OutputFormatterStyle('white')); // Explicitly define warning style
 
 
         return $this->handleExecute($input, $output);
