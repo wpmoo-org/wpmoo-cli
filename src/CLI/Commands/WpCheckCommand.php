@@ -18,6 +18,7 @@ use WPMoo\CLI\Support\BaseCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Filesystem\Filesystem;
 use DirectoryIterator;
 
@@ -83,8 +84,23 @@ class WpCheckCommand extends BaseCommand
         $wpRoot = $this->detectWpRoot($path);
 
         if (!$wpRoot) {
-            $output->writeln('<error>Could not detect WordPress root. Please specify with --path option or WP_PATH environment variable.</error>');
-            return 1;
+            $helper   = $this->getHelper('question');
+            $question = new Question('<question>Could not detect WordPress root. Please provide the path to your WordPress installation: </question>', null);
+
+            while (true) {
+                $wpRoot = $helper->ask($input, $output, $question);
+
+                if (empty($wpRoot)) {
+                    $output->writeln('<error>No path provided. Aborting.</error>');
+                    return 1;
+                }
+
+                if ($this->isValidWpRoot($wpRoot)) {
+                    break;
+                }
+
+                $output->writeln('<error>Invalid WordPress path. Please try again.</error>');
+            }
         }
 
         $output->writeln('<comment>WordPress Root: ' . $wpRoot . '</comment>');
@@ -108,6 +124,7 @@ class WpCheckCommand extends BaseCommand
                     }
                 } else {
                     $output->writeln('   <error>Main plugin file not found.</error>');
+                    $headers = $this->getEmptyPluginHeaders();
                 }
 
                 $readmeFile = $pluginDir . '/readme.txt';
@@ -119,7 +136,11 @@ class WpCheckCommand extends BaseCommand
                     }
                 } else {
                     $output->writeln('   <comment>Readme.txt not found.</comment>');
+                    $readmeData = $this->getEmptyReadmeData();
                 }
+
+                // Run compatibility checks for the current plugin
+                $this->runCompatibilityChecks($output, $pluginDir, $headers, $readmeData, $noStrict, $ignoreCodes);
             }
         }
 
@@ -156,7 +177,16 @@ class WpCheckCommand extends BaseCommand
             $currentDir = dirname($currentDir);
         }
 
-        // 4. Auto-detection: check common web roots
+        // 4. Auto-detection: check public_html relative to Git top-level directory
+        $gitTopLevelDir = $this->getGitTopLevelDir();
+        if ($gitTopLevelDir) {
+            $potentialPath = $gitTopLevelDir . '/public_html';
+            if ($this->filesystem->exists($potentialPath) && $this->isValidWpRoot($potentialPath)) {
+                return $potentialPath;
+            }
+        }
+
+        // 5. Auto-detection: check common web roots
         $commonWebRoots = [
             'public_html',
             'htdocs',
@@ -183,6 +213,25 @@ class WpCheckCommand extends BaseCommand
     private function isValidWpRoot(string $path): bool
     {
         return $this->filesystem->exists($path . '/wp-config.php');
+    }
+
+    /**
+     * Gets the Git top-level directory.
+     *
+     * @return string|null The absolute path to the Git top-level directory or null if not found.
+     */
+    private function getGitTopLevelDir(): ?string
+    {
+        // Use shell_exec for simplicity in this context,
+        // or a more robust process execution library if available in Symfony Console.
+        $command = 'git rev-parse --show-toplevel 2>/dev/null';
+        $output = shell_exec($command);
+
+        if ($output === null || trim($output) === '') {
+            return null;
+        }
+
+        return trim($output);
     }
 
     /**
@@ -328,6 +377,47 @@ class WpCheckCommand extends BaseCommand
         }
 
         return $readmeData;
+    }
+
+    /**
+     * Returns an empty array of plugin header data.
+     *
+     * @return array<string, string> An associative array of empty plugin header data.
+     */
+    private function getEmptyPluginHeaders(): array
+    {
+        return [
+            'Plugin Name' => '',
+            'Plugin URI' => '',
+            'Version' => '',
+            'Description' => '',
+            'Author' => '',
+            'Author URI' => '',
+            'Text Domain' => '',
+            'Domain Path' => '',
+            'Network' => '',
+            'Requires WP' => '',
+            'Requires PHP' => '',
+            'License' => '',
+            'License URI' => '',
+        ];
+    }
+
+    /**
+     * Returns an empty array of readme.txt data.
+     *
+     * @return array<string, string> An associative array of empty readme.txt data.
+     */
+    private function getEmptyReadmeData(): array
+    {
+        return [
+            'Stable tag' => '',
+            'Requires at least' => '',
+            'Tested up to' => '',
+            'Requires PHP' => '',
+            'License' => '',
+            'License URI' => '',
+        ];
     }
 
     /**
