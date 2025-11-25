@@ -17,6 +17,7 @@ namespace WPMoo\CLI\Commands;
 use WPMoo\CLI\Support\BaseCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Info command to provide environment information.
@@ -42,13 +43,16 @@ class InfoCommand extends BaseCommand
      */
     public function handleExecute(InputInterface $input, OutputInterface $output): int
     {
+        $io = new SymfonyStyle($input, $output);
+
         $php = PHP_VERSION;
         $wp  = function_exists('get_bloginfo') ? get_bloginfo('version') : 'n/a (CLI)';
 
-        $output->writeln('<info>WPMoo — WordPress Micro OOP Framework</info>');
-        $output->writeln('<comment>PHP: ' . $php . '</comment>');
-        $output->writeln('<comment>WP : ' . $wp . '</comment>');
-        $output->writeln('');
+        $io->title('WPMoo — WordPress Micro OOP Framework');
+
+        $io->writeln("<info>PHP Version:</info>     {$php}");
+        $io->writeln("<info>WordPress Version:</info> {$wp}");
+        $io->newLine();
 
         return 0;
     }

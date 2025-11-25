@@ -41,8 +41,12 @@ abstract class BaseCommand extends Command implements CommandInterface
         $formatter = $output->getFormatter();
         $formatter->setStyle('important', new OutputFormatterStyle('yellow', null, ['bold']));
         $formatter->setStyle('question', new OutputFormatterStyle('black', 'yellow'));
-        $formatter->setStyle('warning', new OutputFormatterStyle('white')); // Explicitly define warning style
-
+        $formatter->setStyle('warning', new OutputFormatterStyle('black', 'yellow')); // More appropriate warning style
+        $formatter->setStyle('success', new OutputFormatterStyle('green', null, ['bold']));
+        $formatter->setStyle('error', new OutputFormatterStyle('white', 'red', ['bold']));
+        $formatter->setStyle('info', new OutputFormatterStyle('cyan', null, ['bold']));
+        $formatter->setStyle('comment', new OutputFormatterStyle('yellow'));
+        $formatter->setStyle('highlight', new OutputFormatterStyle('black', 'cyan', ['bold']));
 
         return $this->handleExecute($input, $output);
     }
