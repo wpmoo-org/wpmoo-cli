@@ -22,7 +22,7 @@ if (! file_exists('moo') || $is_main_entry_point) {
     $content .= "<?php\n";
     $content .= "\n";
     $content .= "\$argv = array_slice(\$GLOBALS['argv'], 1);\n";
-    $content .= "\$command = 'php vendor/bin/moo ' . implode(' ', array_map('escapeshellarg', \$argv));\n";
+    $content .= "\$command = 'php vendor/bin/moo --ansi ' . implode(' ', array_map('escapeshellarg', \$argv));\n";
     $content .= "\$exitCode = 0;\n";
     $content .= "passthru(\$command, \$exitCode);\n";
     $content .= "exit(\$exitCode);\n";
