@@ -23,7 +23,9 @@
     "php": ">=7.4",
     "symfony/console": "^5.4",
     "symfony/yaml": "^5.4",
-    "symfony/filesystem": "^5.4"
+    "symfony/filesystem": "^5.4",
+    "symfony/process": "^5.4",
+    "gettext/gettext": "^4.8"
   },
   "extra": {
     "branch-alias": {

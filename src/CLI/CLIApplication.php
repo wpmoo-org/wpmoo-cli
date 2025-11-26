@@ -22,7 +22,7 @@ use Symfony\Component\Console\Command\ListCommand;
 use Symfony\Component\Console\Command\HelpCommand;
 use WPMoo\CLI\Commands\InfoCommand;
 use WPMoo\CLI\Commands\RenameCommand;
-use WPMoo\CLI\Commands\VersionCommand;
+use WPMoo\CLI\Commands\DeployCommand;
 use WPMoo\CLI\Support\Banner;
 
 /**
@@ -61,14 +61,13 @@ class CLIApplication extends Application
                 // Only Info and List commands are active in wpmoo-cli
                 // List command is added by default by Symfony Console
                 break;
-            case 'wpmoo':
-                // In wpmoo framework, add version command
-                $commands[] = new VersionCommand();
+            case 'wpmoo-framework':
+                // In wpmoo framework, add deploy commands
+                $commands[] = new DeployCommand();
                 break;
             case 'wpmoo-plugin':
             default:
                 // For starter or other WPMoo-based plugins, add all commands
-                $commands[] = new VersionCommand();
                 $commands[] = new RenameCommand();
                 break;
         }
@@ -100,7 +99,7 @@ class CLIApplication extends Application
                 if ($packageName === 'wpmoo/wpmoo-cli') {
                     return 'wpmoo-cli';
                 } elseif ($packageName === 'wpmoo/wpmoo') {
-                    return 'wpmoo';
+                    return 'wpmoo-framework';
                 }
             }
         }

@@ -107,4 +107,57 @@ abstract class BaseCommand extends Command implements CommandInterface
 
         return round($size, $decimals) . ' ' . $units[ $i ];
     }
+
+    /**
+     * Identify the project type and location of version files.
+     *
+     * @return array<string, mixed> Project information.
+     */
+    protected function identifyProject(): array
+    {
+        $cwd = $this->getCwd();
+
+        // Check for wpmoo framework project
+        $wpmooRootPath = $cwd . '/wpmoo.php';
+        $isWPMooFramework = file_exists($wpmooRootPath) &&
+            strpos(file_get_contents($wpmooRootPath), 'Plugin Name: WPMoo Framework') !== false;
+
+        if ($isWPMooFramework) {
+            return [
+                'found' => true,
+                'type' => 'wpmoo-framework',
+                'main_file' => $wpmooRootPath,
+                'readme_file' => $cwd . '/readme.txt' // Check if readme.txt exists
+            ];
+        }
+
+        // Check for wpmoo-starter or other wpmoo-based plugin
+        $phpFiles = glob($cwd . '/*.php');
+        if ($phpFiles) {
+            foreach ($phpFiles as $file) {
+                $content = file_get_contents($file);
+                // Look for WPMoo in plugin header
+                if (
+                    preg_match('/(wpmoo|WPMoo)/i', $content) &&
+                    (preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
+                    preg_match('/^[ \t\/*#@]*Theme Name:/im', $content))
+                ) {
+                    $readmePath = $cwd . '/readme.txt';
+                    return [
+                        'found' => true,
+                        'type' => 'wpmoo-plugin',
+                        'main_file' => $file,
+                        'readme_file' => file_exists($readmePath) ? $readmePath : null
+                    ];
+                }
+            }
+        }
+
+        return [
+            'found' => false,
+            'type' => 'unknown',
+            'main_file' => null,
+            'readme_file' => null
+        ];
+    }
 }
