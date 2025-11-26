@@ -26,7 +26,8 @@ class PotGenerator
     public function generate(string $sourcePath, string $outputFile, array $exclude = []): bool
     {
         // Create translations object
-        $translations = Translations::create('wpmoo');
+        $translations = new Translations();
+        $translations->setDomain('wpmoo');
 
         // Create a scanner
         $scanner = new PhpScanner($translations);
