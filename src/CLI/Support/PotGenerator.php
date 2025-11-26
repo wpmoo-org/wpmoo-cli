@@ -35,7 +35,7 @@ class PotGenerator
         ];
 
         // Extract translations from the source path
-        PhpCode::fromDirectory($sourcePath, $translations, $options);
+        PhpCode::extract($sourcePath, $translations, $options);
 
         // Set headers
         $translations->setHeader('Project-Id-Version', 'WPMoo Framework');
