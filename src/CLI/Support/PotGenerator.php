@@ -9,7 +9,7 @@
 
 namespace WPMoo\CLI\Support;
 
-use Gettext\Scanner\PhpScanner;
+use Gettext\Extractors\PhpCode;
 use Gettext\Translations;
 use Gettext\Generator\PoGenerator;
 
@@ -25,12 +25,8 @@ class PotGenerator
      */
     public function generate(string $sourcePath, string $outputFile, array $exclude = []): bool
     {
-        // Create translations object
         $translations = new Translations();
         $translations->setDomain('wpmoo');
-
-        // Create a scanner
-        $scanner = new PhpScanner($translations);
 
         // Define options for scanning
         $options = [
@@ -38,8 +34,8 @@ class PotGenerator
             'extract_comments' => ['translators:'],
         ];
 
-        // Scan the source path
-        $scanner->scan($sourcePath, $options);
+        // Extract translations from the source path
+        PhpCode::fromDirectory($sourcePath, $translations, $options);
 
         // Set headers
         $translations->setHeader('Project-Id-Version', 'WPMoo Framework');
