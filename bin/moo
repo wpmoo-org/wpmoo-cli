@@ -45,7 +45,13 @@ function find_autoload_file( string $startPath ): ?string {
 }
 
 // Find and load the autoloader.
-$autoload_file = find_autoload_file( getcwd() );
+$cwd = getcwd();
+$autoload_file = find_autoload_file( $cwd );
+
+echo "DEBUG INFO:\n";
+echo "Current Working Directory: " . $cwd . "\n";
+echo "Autoloader Found: " . $autoload_file . "\n";
+die("--- End of Debug ---\n");
 
 if ( ! $autoload_file ) {
     // Write the error message to STDERR for proper error handling.
