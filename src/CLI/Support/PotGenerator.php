@@ -11,7 +11,7 @@ namespace WPMoo\CLI\Support;
 
 use Gettext\Extractors\PhpCode;
 use Gettext\Translations;
-use Gettext\Generator\PoGenerator;
+use Gettext\Generators\Po;
 
 class PotGenerator
 {
@@ -34,8 +34,8 @@ class PotGenerator
             'extract_comments' => ['translators:'],
         ];
 
-        // Extract translations from the source path
-        PhpCode::extract($sourcePath, $translations, $options);
+        // Extract translations from the source path - scan directory for PHP files
+        $this->extractFromDirectory($sourcePath, $translations, $options);
 
         // Set headers
         $translations->setHeader('Project-Id-Version', 'WPMoo Framework');
@@ -44,8 +44,7 @@ class PotGenerator
         $translations->setHeader('Content-Type', 'text/plain; charset=UTF-8');
 
         // Generate the .pot file content
-        $generator = new PoGenerator();
-        $potContent = $generator->generateString($translations);
+        $potContent = Po::toString($translations);
 
         // Ensure the output directory exists
         $outputDir = dirname($outputFile);
@@ -55,5 +54,40 @@ class PotGenerator
 
         // Save the file
         return file_put_contents($outputFile, $potContent) !== false;
+    }
+
+    /**
+     * Extract translations from all PHP files in a directory.
+     *
+     * @param string $directory The directory to scan for PHP files.
+     * @param \Gettext\Translations $translations The translations collection to add to.
+     * @param array $options Options for extraction.
+     * @return void
+     */
+    private function extractFromDirectory(string $directory, Translations $translations, array $options = []): void
+    {
+        $excluded_dirs = $options['excluded_directories'] ?? [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($directory, \RecursiveDirectoryIterator::SKIP_DOTS)
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isFile() && $file->getExtension() === 'php') {
+                // Check if file is in an excluded directory
+                $filePath = $file->getPathname();
+                $shouldSkip = false;
+
+                foreach ($excluded_dirs as $excluded_dir) {
+                    if (strpos($filePath, $excluded_dir) !== false) {
+                        $shouldSkip = true;
+                        break;
+                    }
+                }
+
+                if (!$shouldSkip) {
+                    $translations->addFromPhpCodeFile($filePath, $options);
+                }
+            }
+        }
     }
 }
