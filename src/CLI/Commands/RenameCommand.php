@@ -96,12 +96,19 @@ class RenameCommand extends BaseCommand
             if (stripos($answer, 'WPMoo') !== false) {
                 throw new \RuntimeException('Namespace cannot contain "WPMoo".');
             }
+
             // Allow namespaces with backslashes (sub-namespaces)
             // Each part should be a valid PHP identifier
             $parts = explode('\\', $answer);
             foreach ($parts as $part) {
                 if ($part !== '' && !preg_match('/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/', $part)) {
-                    throw new \RuntimeException('Namespace is not valid.');
+                    throw new \RuntimeException('Namespace is not valid: "' . $part . '" is not a valid PHP identifier.');
+                }
+
+                // Additional validation for WordPress/WPMoo conventions:
+                // Namespace parts should follow PascalCase (uppercase first letter, no underscores in middle)
+                if ($part !== '' && !preg_match('/^[A-Z][a-zA-Z0-9]*$/', $part)) {
+                    throw new \RuntimeException('Namespace part "' . $part . '" should follow PascalCase convention (start with uppercase letter, only letters and numbers allowed).');
                 }
             }
             return $answer;
