@@ -45,7 +45,7 @@ function find_autoload_file( string $startPath ): ?string {
 }
 
 // Find and load the autoloader.
-$autoload_file = find_autoload_file( __DIR__ );
+$autoload_file = find_autoload_file( getcwd() );
 
 if ( ! $autoload_file ) {
     // Write the error message to STDERR for proper error handling.
