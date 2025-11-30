@@ -128,19 +128,42 @@ class DeployCommand extends BaseCommand
             $vendorPath = $build_path . '/vendor';
             $this->runProcess(['mkdir', '-p', $vendorPath], $output);
 
-            // Copy the WPMoo framework to the vendor directory
+            // Create the wpmoo directory in vendor
+            $wpmooVendorPath = $vendorPath . '/wpmoo';
+            $this->runProcess(['mkdir', '-p', $wpmooVendorPath], $output);
+
+            // Copy only the required parts of the WPMoo framework: src and LICENSE
             $wpmooFrameworkPath = $this->getCwd() . '/vendor/wpmoo/wpmoo';
             if (is_dir($wpmooFrameworkPath)) {
-                $this->runProcess(['cp', '-r', $wpmooFrameworkPath, $vendorPath . '/'], $output);
+                // Copy src directory
+                $srcPath = $wpmooFrameworkPath . '/src';
+                if (is_dir($srcPath)) {
+                    $this->runProcess(['cp', '-r', $srcPath, $wpmooVendorPath . '/'], $output);
+                }
+
+                // Copy LICENSE file
+                $licensePath = $wpmooFrameworkPath . '/LICENSE';
+                if (file_exists($licensePath)) {
+                    $this->runProcess(['cp', $licensePath, $wpmooVendorPath . '/'], $output);
+                }
+
+
+                // Copy required files for autoloading
+                $autoloadPath = $wpmooFrameworkPath . '/vendor/autoload.php';
+                if (file_exists($autoloadPath)) {
+                    $autoloadVendorPath = $wpmooVendorPath . '/vendor';
+                    $this->runProcess(['mkdir', '-p', $autoloadVendorPath], $output);
+                    $this->runProcess(['cp', $autoloadPath, $autoloadVendorPath . '/'], $output);
+                }
             } else {
                 $output->writeln('<error>WPMoo framework not found at expected location</error>');
                 return self::FAILURE;
             }
 
-            // Also copy the autoloader if it exists
-            $autoloadPath = $this->getCwd() . '/vendor/autoload.php';
-            if (file_exists($autoloadPath)) {
-                $this->runProcess(['cp', $autoloadPath, $vendorPath . '/'], $output);
+            // Also copy the main autoloader if it exists
+            $mainAutoloadPath = $this->getCwd() . '/vendor/autoload.php';
+            if (file_exists($mainAutoloadPath)) {
+                $this->runProcess(['cp', $mainAutoloadPath, $vendorPath . '/'], $output);
             }
         }
 
