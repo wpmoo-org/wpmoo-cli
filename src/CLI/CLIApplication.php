@@ -68,6 +68,7 @@ class CLIApplication extends Application
             case 'wpmoo-plugin':
             default:
                 // For starter or other WPMoo-based plugins, add all commands.
+                $commands[] = new DeployCommand();
                 $commands[] = new RenameCommand();
                 break;
         }
