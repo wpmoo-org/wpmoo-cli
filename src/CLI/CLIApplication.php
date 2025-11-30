@@ -23,6 +23,7 @@ use Symfony\Component\Console\Command\HelpCommand;
 use WPMoo\CLI\Commands\InfoCommand;
 use WPMoo\CLI\Commands\RenameCommand;
 use WPMoo\CLI\Commands\DeployCommand;
+use WPMoo\CLI\Commands\UpdateCommand;
 use WPMoo\CLI\Support\Banner;
 
 /**
@@ -70,6 +71,7 @@ class CLIApplication extends Application
                 // For starter or other WPMoo-based plugins, add all commands.
                 $commands[] = new DeployCommand();
                 $commands[] = new RenameCommand();
+                $commands[] = new UpdateCommand();
                 break;
         }
 
