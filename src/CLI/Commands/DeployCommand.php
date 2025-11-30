@@ -128,41 +128,37 @@ class DeployCommand extends BaseCommand
             $this->runProcess(['cp', '-r', $srcAssetsPath, dirname($distSrcAssetsPath) . '/'], $output);
         }
 
-        // For WPMoo-based plugins, include the WPMoo framework
+        // For WPMoo-based plugins, include the necessary vendor dependencies
         if ($project['type'] === 'wpmoo-plugin') {
-            $output->writeln('> Including WPMoo framework for WPMoo-based plugin...');
+            $output->writeln('> Including vendor dependencies for WPMoo-based plugin...');
 
             // Create the vendor directory in the build
             $vendorPath = $build_path . '/vendor';
             $this->runProcess(['mkdir', '-p', $vendorPath], $output);
 
-            // Create the wpmoo directory in vendor
-            $wpmooVendorPath = $vendorPath . '/wpmoo';
-            $this->runProcess(['mkdir', '-p', $wpmooVendorPath], $output);
-
-            // Copy only the required parts of the WPMoo framework: src and LICENSE
-            $wpmooFrameworkPath = $this->getCwd() . '/vendor/wpmoo/wpmoo';
-            if (is_dir($wpmooFrameworkPath)) {
-                // Copy src directory
-                $srcPath = $wpmooFrameworkPath . '/src';
-                if (is_dir($srcPath)) {
-                    $this->runProcess(['cp', '-r', $srcPath, $wpmooVendorPath . '/'], $output);
-                }
-
-                // Copy LICENSE file
-                $licensePath = $wpmooFrameworkPath . '/LICENSE';
-                if (file_exists($licensePath)) {
-                    $this->runProcess(['cp', $licensePath, $wpmooVendorPath . '/'], $output);
-                }
-            } else {
-                $output->writeln('<error>WPMoo framework not found at expected location</error>');
-                return self::FAILURE;
+            // Copy the main autoloader
+            $sourceAutoloadPath = $this->getCwd() . '/vendor/autoload.php';
+            if (file_exists($sourceAutoloadPath)) {
+                $this->runProcess(['cp', $sourceAutoloadPath, $vendorPath . '/'], $output);
             }
 
-            // Also copy the main autoloader if it exists
-            $mainAutoloadPath = $this->getCwd() . '/vendor/autoload.php';
-            if (file_exists($mainAutoloadPath)) {
-                $this->runProcess(['cp', $mainAutoloadPath, $vendorPath . '/'], $output);
+            // Copy the composer directory with autoloader files
+            $sourceComposerPath = $this->getCwd() . '/vendor/composer';
+            if (is_dir($sourceComposerPath)) {
+                $this->runProcess(['cp', '-r', $sourceComposerPath, $vendorPath . '/'], $output);
+            }
+
+            // Copy the WPMoo framework
+            $sourceWpMooPath = $this->getCwd() . '/vendor/wpmoo';
+            if (is_dir($sourceWpMooPath)) {
+                $this->runProcess(['cp', '-r', $sourceWpMooPath, $vendorPath . '/'], $output);
+            }
+
+            // Copy commonly needed runtime dependencies based on the error messages seen
+            // Check if symfony dependencies are needed (based on the earlier error)
+            $sourceSymfonyPath = $this->getCwd() . '/vendor/symfony';
+            if (is_dir($sourceSymfonyPath)) {
+                $this->runProcess(['cp', '-r', $sourceSymfonyPath, $vendorPath . '/'], $output);
             }
         }
 
