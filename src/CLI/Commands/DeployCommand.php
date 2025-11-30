@@ -120,6 +120,14 @@ class DeployCommand extends BaseCommand
         $this->runProcess(['mkdir', $build_path], $output);
         $this->runShellCommand('git archive HEAD | tar -x -C ' . escapeshellarg($build_path), $output, true);
 
+        // After git archive, copy built assets if they exist (e.g. from build processes)
+        $srcAssetsPath = $this->getCwd() . '/src/assets';
+        $distSrcAssetsPath = $build_path . '/src/assets';
+        if (is_dir($srcAssetsPath)) {
+            $this->runProcess(['mkdir', '-p', dirname($distSrcAssetsPath)], $output);
+            $this->runProcess(['cp', '-r', $srcAssetsPath, dirname($distSrcAssetsPath) . '/'], $output);
+        }
+
         // For WPMoo-based plugins, include the WPMoo framework
         if ($project['type'] === 'wpmoo-plugin') {
             $output->writeln('> Including WPMoo framework for WPMoo-based plugin...');
@@ -145,15 +153,6 @@ class DeployCommand extends BaseCommand
                 $licensePath = $wpmooFrameworkPath . '/LICENSE';
                 if (file_exists($licensePath)) {
                     $this->runProcess(['cp', $licensePath, $wpmooVendorPath . '/'], $output);
-                }
-
-
-                // Copy required files for autoloading
-                $autoloadPath = $wpmooFrameworkPath . '/vendor/autoload.php';
-                if (file_exists($autoloadPath)) {
-                    $autoloadVendorPath = $wpmooVendorPath . '/vendor';
-                    $this->runProcess(['mkdir', '-p', $autoloadVendorPath], $output);
-                    $this->runProcess(['cp', $autoloadPath, $autoloadVendorPath . '/'], $output);
                 }
             } else {
                 $output->writeln('<error>WPMoo framework not found at expected location</error>');
