@@ -28,31 +28,31 @@ class PotGenerator
         $translations = new Translations();
         $translations->setDomain('wpmoo');
 
-        // Define options for scanning
+        // Define options for scanning.
         $options = [
             'excluded_directories' => $exclude,
             'extract_comments' => ['translators:'],
         ];
 
-        // Extract translations from the source path - scan directory for PHP files
+        // Extract translations from the source path - scan directory for PHP files.
         $this->extractFromDirectory($sourcePath, $translations, $options);
 
-        // Set headers
+        // Set headers.
         $translations->setHeader('Project-Id-Version', 'WPMoo Framework');
         $translations->setHeader('POT-Creation-Date', date('Y-m-d H:i:sO'));
         $translations->setHeader('Language', 'en_US');
         $translations->setHeader('Content-Type', 'text/plain; charset=UTF-8');
 
-        // Generate the .pot file content
+        // Generate the .pot file content.
         $potContent = Po::toString($translations);
 
-        // Ensure the output directory exists
+        // Ensure the output directory exists.
         $outputDir = dirname($outputFile);
         if (!is_dir($outputDir)) {
             mkdir($outputDir, 0755, true);
         }
 
-        // Save the file
+        // Save the file.
         return file_put_contents($outputFile, $potContent) !== false;
     }
 
@@ -73,7 +73,7 @@ class PotGenerator
 
         foreach ($iterator as $file) {
             if ($file->isFile() && $file->getExtension() === 'php') {
-                // Check if file is in an excluded directory
+                // Check if file is in an excluded directory.
                 $filePath = $file->getPathname();
                 $shouldSkip = false;
 

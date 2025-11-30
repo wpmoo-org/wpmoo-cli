@@ -35,7 +35,7 @@ class CLIApplication extends Application
      */
     public function __construct()
     {
-        // Get version from composer.json or use a default
+        // Get version from composer.json or use a default.
         $version = $this->getVersion();
         parent::__construct('WPMoo CLI', $version);
 
@@ -50,24 +50,24 @@ class CLIApplication extends Application
     {
         $context = $this->identifyProjectContext();
 
-        // Always register essential commands
+        // Always register essential commands.
         $commands = array(
             new InfoCommand(),
         );
 
-        // Add commands based on context
+        // Add commands based on context.
         switch ($context) {
             case 'wpmoo-cli':
-                // Only Info and List commands are active in wpmoo-cli
-                // List command is added by default by Symfony Console
+                // Only Info and List commands are active in wpmoo-cli.
+                // List command is added by default by Symfony Console.
                 break;
             case 'wpmoo-framework':
-                // In wpmoo framework, add deploy commands
+                // In wpmoo framework, add deploy commands.
                 $commands[] = new DeployCommand();
                 break;
             case 'wpmoo-plugin':
             default:
-                // For starter or other WPMoo-based plugins, add all commands
+                // For starter or other WPMoo-based plugins, add all commands.
                 $commands[] = new RenameCommand();
                 break;
         }
@@ -86,7 +86,7 @@ class CLIApplication extends Application
     {
         $cwd = getcwd();
         if (!$cwd) {
-            return 'wpmoo-plugin'; // Default to plugin behavior
+            return 'wpmoo-plugin'; // Default to plugin behavior.
         }
 
         $composerFile = $cwd . '/composer.json';
@@ -104,12 +104,12 @@ class CLIApplication extends Application
             }
         }
 
-        // Check if this looks like a WPMoo-based plugin by looking for WPMoo usage
+        // Check if this looks like a WPMoo-based plugin by looking for WPMoo usage.
         $phpFiles = glob($cwd . '/*.php');
         if ($phpFiles) {
             foreach ($phpFiles as $file) {
                 $content = file_get_contents($file);
-                // Look for WPMoo in plugin header or usage
+                // Look for WPMoo in plugin header or usage.
                 if (
                     preg_match('/(wpmoo|WPMoo)/i', $content) &&
                     (preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
@@ -120,13 +120,13 @@ class CLIApplication extends Application
             }
         }
 
-        // Default to plugin behavior if we can't clearly determine
+        // Default to plugin behavior if we can't clearly determine.
         return 'wpmoo-plugin';
     }
 
     public function getHelp(): string
     {
-        // Take the original help output (with banner)
+        // Take the original help output (with banner).
         $help = Banner::getAsciiArt();
 
         return $help;
@@ -147,17 +147,17 @@ class CLIApplication extends Application
      */
     protected function getDefaultCommands(): array
     {
-        // Return only essential commands (but without default options)
+        // Return only essential commands (but without default options).
         $defaultCommands = parent::getDefaultCommands();
 
-        // Filter to only include commands we want (ListCommand)
+        // Filter to only include commands we want (ListCommand).
         $filteredCommands = array();
         foreach ($defaultCommands as $command) {
-            // Keep only ListCommand and HelpCommand
+            // Keep only ListCommand and HelpCommand.
             if ($command instanceof ListCommand) {
                 $filteredCommands[] = $command;
             } elseif ($command instanceof HelpCommand) {
-                // Keep HelpCommand for functionality, but hide it
+                // Keep HelpCommand for functionality, but hide it.
                 $command->setHidden(true);
                 $filteredCommands[] = $command;
             }
@@ -173,16 +173,16 @@ class CLIApplication extends Application
      */
     protected function getDefaultInputDefinition(): InputDefinition
     {
-        // Create the default input definition with standard Symfony Console options
+        // Create the default input definition with standard Symfony Console options.
         $inputDefinition = new InputDefinition(array(
-            // 1. Command argument (optional - let Symfony handle this properly)
+            // 1. Command argument (optional - let Symfony handle this properly).
             new InputArgument(
                 'command',
                 InputArgument::OPTIONAL,
                 'The command to execute'
             ),
 
-            // 2. Standard options
+            // 2. Standard options.
             new InputOption(
                 'help',
                 'h',
@@ -228,7 +228,7 @@ class CLIApplication extends Application
             }
         }
 
-        // Default fallback version
+        // Default fallback version.
         return 'dev-main';
     }
 }

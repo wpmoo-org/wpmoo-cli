@@ -48,34 +48,34 @@ class Banner
             $coloredLine = '';
             $length = mb_strlen($line);
 
-            // Skip empty lines
+            // Skip empty lines.
             if ($length === 0) {
                 $output[] = '';
                 continue;
             }
 
-            // For each character in the line
+            // For each character in the line.
             for ($i = 0; $i < $length; $i++) {
                 $char = mb_substr($line, $i, 1);
 
-                // Only color non-space characters
+                // Only color non-space characters.
                 if (trim($char) === '') {
                     $coloredLine .= $char;
                     continue;
                 }
 
-                // Calculate the interpolation factor
+                // Calculate the interpolation factor.
                 $percent = $i / ($length - 1);
 
-                // Interpolate RGB values
+                // Interpolate RGB values.
                 $r = (int) ($startColor[0] + ($endColor[0] - $startColor[0]) * $percent);
                 $g = (int) ($startColor[1] + ($endColor[1] - $startColor[1]) * $percent);
                 $b = (int) ($startColor[2] + ($endColor[2] - $startColor[2]) * $percent);
 
-                // Hex color format
+                // Hex color format.
                 $hex = sprintf("#%02x%02x%02x", $r, $g, $b);
 
-                // Symfony Console color tag
+                // Symfony Console color tag.
                 $coloredLine .= "<fg=$hex>$char</>";
             }
             $output[] = $coloredLine;

@@ -31,7 +31,7 @@ class DeployCommand extends BaseCommand
     /**
      * @var string The SVN repository URL.
      */
-    private $svn_url = 'https://plugins.svn.wordpress.org/wpmoo/'; // This is a placeholder
+    private $svn_url = 'https://plugins.svn.wordpress.org/wpmoo/'; // This is a placeholder.
 
     protected function configure()
     {
@@ -59,7 +59,7 @@ class DeployCommand extends BaseCommand
 
         $versionManager = new VersionManager($this);
 
-        // 1. Get new version
+        // 1. Get new version.
         $current_version = $versionManager->getCurrentVersion($project);
         $output->writeln("<comment>Current version: {$current_version}</comment>");
         $new_version = $versionManager->interactiveVersionSelection($input, $output, $current_version);
@@ -80,11 +80,11 @@ class DeployCommand extends BaseCommand
             return self::SUCCESS;
         }
 
-        // 2. Build assets
+        // 2. Build assets.
         $output->writeln('> Building assets with Gulp...');
         $this->runProcess(['gulp', 'build'], $output);
 
-        // 3. Generate POT file
+        // 3. Generate POT file.
         $output->writeln('> Generating .pot file...');
         $potGenerator = new PotGenerator();
         $potGenerator->generate(
@@ -94,20 +94,20 @@ class DeployCommand extends BaseCommand
         );
         $output->writeln('<info>languages/wpmoo.pot file updated.</info>');
 
-        // 4. Run checks
+        // 4. Run checks.
         $output->writeln('> Running checks...');
         $this->runProcess(['composer', 'check'], $output);
 
-        // 5. Update version numbers
+        // 5. Update version numbers.
         $output->writeln("> Bumping version to {$new_version}...");
         $versionManager->updateVersion($project, $new_version, $output);
 
-        // 6. Commit all changes
+        // 6. Commit all changes.
         $output->writeln('> Committing all changes...');
         $this->runProcess(['git', 'add', '.'], $output);
         $this->runProcess(['git', 'commit', '-m', "chore(release): Build and bump version to {$new_version}"], $output);
 
-        // 7. Create a clean build
+        // 7. Create a clean build.
         $build_path = $this->getCwd() . '/dist';
         $output->writeln("> Creating a clean build in {$build_path}...");
         if (is_dir($build_path)) {
@@ -117,18 +117,18 @@ class DeployCommand extends BaseCommand
         $this->runShellCommand('git archive HEAD | tar -x -C ' . escapeshellarg($build_path), $output, true);
 
         if (!$input->getOption('build-only')) {
-            // 8. Handle SVN
+            // 8. Handle SVN.
             $this->handleSvn($output);
 
-            // 9. Copy files to trunk
+            // 9. Copy files to trunk.
             $output->writeln('> Copying files to SVN trunk...');
             $this->rsync("{$build_path}/", "{$this->svn_path}/trunk/", $output);
 
-            // 10. Add/remove files in SVN
+            // 10. Add/remove files in SVN.
             $output->writeln('> Staging SVN changes...');
             $this->svnStatus();
 
-            // 11. Commit to SVN trunk
+            // 11. Commit to SVN trunk.
             if ($input->getOption('dry-run')) {
                 $output->writeln('<comment>DRY RUN: Skipping SVN trunk commit.</comment>');
                 $this->runProcess(['svn', 'status'], $output, false, $this->svn_path);
@@ -139,17 +139,17 @@ class DeployCommand extends BaseCommand
                 }
             }
 
-            // 12. Create SVN tag
+            // 12. Create SVN tag.
             $output->writeln("> Handling SVN tag for version {$new_version}...");
             $this->svnTag($new_version, $output, $input->getOption('dry-run'));
 
-            // 13. Git push commit and tags
+            // 13. Git push commit and tags.
             $output->writeln("> Pushing Git commit and tags...");
             if (!$input->getOption('dry-run')) {
                 $this->runProcess(['git', 'push', '--follow-tags'], $output);
             }
 
-            // 14. Cleanup
+            // 14. Cleanup.
             $output->writeln('> Cleaning up build files...');
             $this->runProcess(['rm', '-rf', $build_path], $output);
 
@@ -214,7 +214,7 @@ class DeployCommand extends BaseCommand
             $action = $parts[0];
             $file = $parts[1];
 
-            if ($action === '?') { // Not under version control
+            if ($action === '?') { // Not under version control.
                 (new Process(['svn', 'add', $file], $this->svn_path))->mustRun();
             } elseif ($action === '!') { // Missing
                 (new Process(['svn', 'rm', '--force', $file], $this->svn_path))->mustRun();

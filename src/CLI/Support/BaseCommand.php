@@ -34,14 +34,14 @@ abstract class BaseCommand extends Command implements CommandInterface
      */
     final protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        // Force output decoration to ensure colors are always displayed
+        // Force output decoration to ensure colors are always displayed.
         $output->setDecorated(true);
 
-        // Define custom styles
+        // Define custom styles.
         $formatter = $output->getFormatter();
         $formatter->setStyle('important', new OutputFormatterStyle('yellow', null, ['bold']));
         $formatter->setStyle('question', new OutputFormatterStyle('black', 'yellow'));
-        $formatter->setStyle('warning', new OutputFormatterStyle('black', 'yellow')); // More appropriate warning style
+        $formatter->setStyle('warning', new OutputFormatterStyle('black', 'yellow')); // More appropriate warning style.
         $formatter->setStyle('success', new OutputFormatterStyle('green', null, ['bold']));
         $formatter->setStyle('error', new OutputFormatterStyle('white', 'red', ['bold']));
         $formatter->setStyle('info', new OutputFormatterStyle('cyan', null, ['bold']));
@@ -117,7 +117,7 @@ abstract class BaseCommand extends Command implements CommandInterface
     {
         $cwd = $this->getCwd();
 
-        // Check for wpmoo framework project
+        // Check for wpmoo framework project.
         $wpmooRootPath = $cwd . '/wpmoo.php';
         $isWPMooFramework = file_exists($wpmooRootPath) &&
             strpos(file_get_contents($wpmooRootPath), 'Plugin Name: WPMoo Framework') !== false;
@@ -127,16 +127,16 @@ abstract class BaseCommand extends Command implements CommandInterface
                 'found' => true,
                 'type' => 'wpmoo-framework',
                 'main_file' => $wpmooRootPath,
-                'readme_file' => $cwd . '/readme.txt' // Check if readme.txt exists
+                'readme_file' => $cwd . '/readme.txt' // Check if readme.txt exists.
             ];
         }
 
-        // Check for wpmoo-starter or other wpmoo-based plugin
+        // Check for wpmoo-starter or other wpmoo-based plugin.
         $phpFiles = glob($cwd . '/*.php');
         if ($phpFiles) {
             foreach ($phpFiles as $file) {
                 $content = file_get_contents($file);
-                // Look for WPMoo in plugin header
+                // Look for WPMoo in plugin header.
                 if (
                     preg_match('/(wpmoo|WPMoo)/i', $content) &&
                     (preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
