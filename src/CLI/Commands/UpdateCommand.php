@@ -19,6 +19,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Filesystem\Filesystem;
 
 /**
  * Update command to refresh the plugin with build processes.
@@ -161,14 +162,21 @@ class UpdateCommand extends BaseCommand
                 throw new \Exception("Cannot create destination directory: {$destDir}");
             }
 
-            // Copy the src directory
-            $this->copyDirectoryRecursively($sourceDir, $destDir . '/src');
+            // Use Symfony filesystem component for more reliable directory copying
+            $fs = new Filesystem();
+            $fs->mirror($sourceDir, $destDir . '/src');
+
+            // Copy the samples directory (needed for demo functionality when framework is loaded as plugin)
+            $samplesSource = $cwd . '/vendor/wpmoo/wpmoo/samples';
+            if (is_dir($samplesSource)) {
+                $fs->mirror($samplesSource, $destDir . '/samples');
+            }
 
             // Copy the LICENSE file
             $licenseSource = $cwd . '/vendor/wpmoo/wpmoo/LICENSE';
             $licenseDest = $destDir . '/LICENSE';
             if (file_exists($licenseSource)) {
-                copy($licenseSource, $licenseDest);
+                $fs->copy($licenseSource, $licenseDest);
             }
 
             return true;
