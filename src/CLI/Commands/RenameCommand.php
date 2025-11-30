@@ -845,7 +845,7 @@ class RenameCommand extends BaseCommand
      *
      * @return array
      */
-    private function identifyProject(): array
+    protected function identifyProject(): array
     {
         $cwd = $this->getCwd();
 
