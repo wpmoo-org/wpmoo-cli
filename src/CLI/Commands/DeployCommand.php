@@ -31,7 +31,7 @@ class DeployCommand extends BaseCommand
     /**
      * @var string The SVN repository URL.
      */
-    private $svn_url = 'https://plugins.svn.wordpress.org/wpmoo/'; // This is a placeholder.
+    private $svn_url; // Will be set based on plugin name during initialization.
 
     protected function configure()
     {
@@ -45,14 +45,18 @@ class DeployCommand extends BaseCommand
     public function handleExecute(InputInterface $input, OutputInterface $output): int
     {
         $project = $this->identifyProject();
-        if ($project['type'] !== 'wpmoo-framework') {
-            $output->writeln('<error>The deploy command can only be run from the root of the WPMoo framework project.</error>');
+        if ($project['type'] !== 'wpmoo-framework' && $project['type'] !== 'wpmoo-plugin') {
+            $output->writeln('<error>The deploy command can only be run from the root of a WPMoo framework project or a WPMoo-based plugin.</error>');
             return self::FAILURE;
         }
 
         $this->svn_path = sys_get_temp_dir() . '/wpmoo-svn';
         if ($input->getOption('svn-url')) {
             $this->svn_url = $input->getOption('svn-url');
+        } else {
+            // Set default SVN URL based on the plugin name if not provided
+            $pluginName = basename($this->getCwd());
+            $this->svn_url = 'https://plugins.svn.wordpress.org/' . $pluginName . '/';
         }
 
         $output->writeln('<info>Preparing for deployment...</info>');
@@ -115,6 +119,30 @@ class DeployCommand extends BaseCommand
         }
         $this->runProcess(['mkdir', $build_path], $output);
         $this->runShellCommand('git archive HEAD | tar -x -C ' . escapeshellarg($build_path), $output, true);
+
+        // For WPMoo-based plugins, include the WPMoo framework
+        if ($project['type'] === 'wpmoo-plugin') {
+            $output->writeln('> Including WPMoo framework for WPMoo-based plugin...');
+
+            // Create the vendor directory in the build
+            $vendorPath = $build_path . '/vendor';
+            $this->runProcess(['mkdir', '-p', $vendorPath], $output);
+
+            // Copy the WPMoo framework to the vendor directory
+            $wpmooFrameworkPath = $this->getCwd() . '/vendor/wpmoo/wpmoo';
+            if (is_dir($wpmooFrameworkPath)) {
+                $this->runProcess(['cp', '-r', $wpmooFrameworkPath, $vendorPath . '/'], $output);
+            } else {
+                $output->writeln('<error>WPMoo framework not found at expected location</error>');
+                return self::FAILURE;
+            }
+
+            // Also copy the autoloader if it exists
+            $autoloadPath = $this->getCwd() . '/vendor/autoload.php';
+            if (file_exists($autoloadPath)) {
+                $this->runProcess(['cp', $autoloadPath, $vendorPath . '/'], $output);
+            }
+        }
 
         if (!$input->getOption('build-only')) {
             // 8. Handle SVN.
