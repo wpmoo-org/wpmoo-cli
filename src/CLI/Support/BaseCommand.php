@@ -1,5 +1,13 @@
 <?php
 
+namespace WPMoo\CLI\Support;
+
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Formatter\OutputFormatterStyle;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use WPMoo\CLI\Interfaces\CommandInterface;
+
 /**
  * Base command class for the WPMoo CLI.
  *
@@ -10,18 +18,6 @@
  * @link  https://wpmoo.org WPMoo – WordPress Micro Object-Oriented Framework.
  * @link  https://github.com/wpmoo/wpmoo GitHub Repository.
  * @license https://spdx.org/licenses/GPL-2.0-or-later.html GPL-2.0-or-later
- */
-
-namespace WPMoo\CLI\Support;
-
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Formatter\OutputFormatterStyle;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
-use WPMoo\CLI\Interfaces\CommandInterface;
-
-/**
- * Abstract base command class.
  */
 abstract class BaseCommand extends Command implements CommandInterface
 {
@@ -48,7 +44,7 @@ abstract class BaseCommand extends Command implements CommandInterface
         $formatter->setStyle('comment', new OutputFormatterStyle('yellow'));
         $formatter->setStyle('highlight', new OutputFormatterStyle('black', 'cyan', ['bold']));
 
-        return $this->handleExecute($input, $output);
+        return $this->handle_execute($input, $output);
     }
 
     /**
@@ -58,14 +54,14 @@ abstract class BaseCommand extends Command implements CommandInterface
      * @param OutputInterface $output Command output.
      * @return int Exit status (0 for success, non-zero for failure).
      */
-    abstract public function handleExecute(InputInterface $input, OutputInterface $output): int;
+    abstract public function handle_execute(InputInterface $input, OutputInterface $output): int;
 
     /**
      * Get the current working directory.
      *
      * @return string Current working directory, or '.' if unable to determine.
      */
-    protected function getCwd(): string
+    protected function get_cwd(): string
     {
         $cwd = getcwd();
         return $cwd ? $cwd : '.';
@@ -77,9 +73,9 @@ abstract class BaseCommand extends Command implements CommandInterface
      * @param string $path Absolute path.
      * @return string Relative path.
      */
-    protected function getRelativePath(string $path): string
+    protected function get_relative_path(string $path): string
     {
-        $cwd  = $this->getCwd();
+        $cwd  = $this->get_cwd();
         $cwd  = rtrim($cwd, '/\\') . DIRECTORY_SEPARATOR;
         $path = (string) $path;
 
@@ -97,15 +93,15 @@ abstract class BaseCommand extends Command implements CommandInterface
      * @param int $decimals Number of decimal places.
      * @return string Formatted size.
      */
-    protected function formatFileSize(int $size, int $decimals = 2): string
+    protected function format_file_size(int $file_size, int $decimal_places = 2): string
     {
-        $units = array( 'B', 'KB', 'MB', 'GB' );
-        $units_count = count($units);
-        for ($i = 0; $size > 1024 && $i < $units_count - 1; $i++) {
-            $size /= 1024;
+        $size_units = array( 'B', 'KB', 'MB', 'GB' );
+        $size_units_count = count($size_units);
+        for ($i = 0; $file_size > 1024 && $i < $size_units_count - 1; $i++) {
+            $file_size /= 1024;
         }
 
-        return round($size, $decimals) . ' ' . $units[ $i ];
+        return round($file_size, $decimal_places) . ' ' . $size_units[ $i ];
     }
 
     /**
@@ -113,28 +109,28 @@ abstract class BaseCommand extends Command implements CommandInterface
      *
      * @return array<string, mixed> Project information.
      */
-    protected function identifyProject(): array
+    protected function identify_project(): array
     {
-        $cwd = $this->getCwd();
+        $current_working_directory = $this->get_cwd();
 
         // Check for wpmoo framework project.
-        $wpmooRootPath = $cwd . '/wpmoo.php';
-        $isWPMooFramework = file_exists($wpmooRootPath) &&
-            strpos(file_get_contents($wpmooRootPath), 'Plugin Name: WPMoo Framework') !== false;
+        $wpmoo_root_path = $current_working_directory . '/wpmoo.php';
+        $is_wpmoo_framework = file_exists($wpmoo_root_path) &&
+            strpos(file_get_contents($wpmoo_root_path), 'Plugin Name: WPMoo Framework') !== false;
 
-        if ($isWPMooFramework) {
+        if ($is_wpmoo_framework) {
             return [
                 'found' => true,
                 'type' => 'wpmoo-framework',
-                'main_file' => $wpmooRootPath,
-                'readme_file' => $cwd . '/readme.txt' // Check if readme.txt exists.
+                'main_file' => $wpmoo_root_path,
+                'readme_file' => $current_working_directory . '/readme.txt' // Check if readme.txt exists.
             ];
         }
 
         // Check for wpmoo-starter or other wpmoo-based plugin.
-        $phpFiles = glob($cwd . '/*.php');
-        if ($phpFiles) {
-            foreach ($phpFiles as $file) {
+        $php_files = glob($current_working_directory . '/*.php');
+        if ($php_files) {
+            foreach ($php_files as $file) {
                 $content = file_get_contents($file);
                 // Look for WPMoo in plugin header.
                 if (
@@ -142,12 +138,12 @@ abstract class BaseCommand extends Command implements CommandInterface
                     (preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
                     preg_match('/^[ \t\/*#@]*Theme Name:/im', $content))
                 ) {
-                    $readmePath = $cwd . '/readme.txt';
+                    $readme_path = $current_working_directory . '/readme.txt';
                     return [
                         'found' => true,
                         'type' => 'wpmoo-plugin',
                         'main_file' => $file,
-                        'readme_file' => file_exists($readmePath) ? $readmePath : null
+                        'readme_file' => file_exists($readme_path) ? $readme_path : null
                     ];
                 }
             }

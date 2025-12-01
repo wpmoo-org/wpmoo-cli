@@ -5,6 +5,9 @@
  *
  * @package WPMoo\CLI\Support
  * @since 0.1.0
+ * @link  https://wpmoo.org WPMoo – WordPress Micro Object-Oriented Framework.
+ * @link  https://github.com/wpmoo/wpmoo GitHub Repository.
+ * @license https://spdx.org/licenses/GPL-2.0-or-later.html GPL-2.0-or-later
  */
 
 namespace WPMoo\CLI\Support;
@@ -23,15 +26,15 @@ class VersionManager
         $this->command = $command;
     }
 
-    public function interactiveVersionSelection(InputInterface $input, OutputInterface $output, string $current): ?string
+    public function interactive_version_selection(InputInterface $input, OutputInterface $output, string $current): ?string
     {
         $options = [
-            'patch'      => sprintf("Patch     - Increment patch (x.y.z → x.y.z+1) [<comment>%s</comment>]", $this->incrementPatch($current)),
-            'minor'      => sprintf("Minor     - Increment minor (x.y.z → x.y+1.0) [<comment>%s</comment>]", $this->incrementMinor($current)),
-            'major'      => sprintf("Major     - Increment major (x.y.z → x+1.0.0) [<comment>%s</comment>]", $this->incrementMajor($current)),
-            'pre-alpha'  => sprintf("Pre-alpha - Pre-alpha (x.y.z → x.y.z-alpha.1) [<comment>%s</comment>]", $this->incrementPreRelease($current, 'alpha')),
-            'pre-beta'   => sprintf("Pre-beta  - Pre-beta (x.y.z → x.y.z-beta.1) [<comment>%s</comment>]", $this->incrementPreRelease($current, 'beta')),
-            'pre-rc'     => sprintf("Pre-RC    - Pre-release candidate (x.y.z → x.y.z-rc.1) [<comment>%s</comment>]", $this->incrementPreRelease($current, 'rc')),
+            'patch'      => sprintf("Patch     - Increment patch (x.y.z → x.y.z+1) [<comment>%s</comment>]", $this->increment_patch($current)),
+            'minor'      => sprintf("Minor     - Increment minor (x.y.z → x.y+1.0) [<comment>%s</comment>]", $this->increment_minor($current)),
+            'major'      => sprintf("Major     - Increment major (x.y.z → x+1.0.0) [<comment>%s</comment>]", $this->increment_major($current)),
+            'pre-alpha'  => sprintf("Pre-alpha - Pre-alpha (x.y.z → x.y.z-alpha.1) [<comment>%s</comment>]", $this->increment_pre_release($current, 'alpha')),
+            'pre-beta'   => sprintf("Pre-beta  - Pre-beta (x.y.z → x.y.z-beta.1) [<comment>%s</comment>]", $this->increment_pre_release($current, 'beta')),
+            'pre-rc'     => sprintf("Pre-RC    - Pre-release candidate (x.y.z → x.y.z-rc.1) [<comment>%s</comment>]", $this->increment_pre_release($current, 'rc')),
             'custom'     => 'Custom    - Enter custom version',
             'cancel'     => 'Cancel    - Cancel operation'
         ];
@@ -46,96 +49,96 @@ class VersionManager
             case 'cancel':
                 return null;
             case 'patch':
-                return $this->incrementPatch($current);
+                return $this->increment_patch($current);
             case 'minor':
-                return $this->incrementMinor($current);
+                return $this->increment_minor($current);
             case 'major':
-                return $this->incrementMajor($current);
+                return $this->increment_major($current);
             case 'pre-alpha':
-                return $this->incrementPreRelease($current, 'alpha');
+                return $this->increment_pre_release($current, 'alpha');
             case 'pre-beta':
-                return $this->incrementPreRelease($current, 'beta');
+                return $this->increment_pre_release($current, 'beta');
             case 'pre-rc':
-                return $this->incrementPreRelease($current, 'rc');
+                return $this->increment_pre_release($current, 'rc');
             case 'custom':
                 $customQuestion = new Question("Enter new version (current: {$current}): ");
                 $customQuestion->setValidator(function ($answer) {
-                    if (!empty($answer) && !$this->isValidVersion($answer)) {
+        if (!$version_manager->is_valid_version($new_version)) {
                         throw new \RuntimeException("Invalid version format: {$answer}");
                     }
                     return $answer;
                 });
                 return $helper->ask($input, $output, $customQuestion);
             default:
-                return $this->incrementPatch($current);
+                return $this->increment_patch($current);
         }
     }
 
-    public function getCurrentVersion(array $projectInfo): string
+    public function get_current_version(array $project_info): string
     {
-        $mainFile = $projectInfo['main_file'];
-        if (!$mainFile || !file_exists($mainFile)) {
+        $main_file = $project_info['main_file'];
+        if (!$main_file || !file_exists($main_file)) {
             return '0.0.0';
         }
-        $content = file_get_contents($mainFile);
-        if (preg_match('/^[ \t\/*#@]*Version:\s*(.*)$/im', $content, $matches)) {
+        $file_content = file_get_contents($main_file);
+        if (preg_match('/^[ \t\/*#@]*Version:\s*(.*)$/im', $file_content, $matches)) {
             return trim($matches[1]);
         }
         return '0.0.0';
     }
 
-    public function updateVersion(array $projectInfo, string $newVersion, OutputInterface $output): bool
+    public function update_version(array $project_info, string $new_version_string, OutputInterface $output): bool
     {
-        $mainFile = $projectInfo['main_file'];
-        $readmeFile = $projectInfo['readme_file'];
-        $success = true;
+        $main_file = $project_info['main_file'];
+        $readme_file = $project_info['readme_file'];
+        $update_success = true;
 
-        if ($mainFile && file_exists($mainFile)) {
-            $content = file_get_contents($mainFile);
-            $pattern = '/^([ \t\/*#@]*Version:\s*)(.*)$/m';
-            $replacement = '${1}' . $newVersion;
-            $newContent = preg_replace($pattern, $replacement, $content);
+        if ($main_file && file_exists($main_file)) {
+            $file_content = file_get_contents($main_file);
+            $regex_pattern = '/^([ \t\/*#@]*Version:\s*)(.*)$/m';
+            $replacement = '${1}' . $new_version_string;
+            $new_file_content = preg_replace($regex_pattern, $replacement, $file_content);
 
-            if ($newContent !== $content) {
-                if (file_put_contents($mainFile, $newContent) !== false) {
-                    $output->writeln("<info>Updated version in {$mainFile}</info>");
+            if ($new_file_content !== $file_content) {
+                if (file_put_contents($main_file, $new_file_content) !== false) {
+                    $output->writeln("<info>Updated version in {$main_file}</info>");
                 } else {
-                    $output->writeln("<error>Failed to update version in {$mainFile}</error>");
-                    $success = false;
+                    $output->writeln("<error>Failed to update version in {$main_file}</error>");
+                    $update_success = false;
                 }
             } else {
-                $output->writeln("<error>Could not find version line in {$mainFile}</error>");
-                $success = false;
+                $output->writeln("<error>Could not find version line in {$main_file}</error>");
+                $update_success = false;
             }
         }
 
-        if ($readmeFile && file_exists($readmeFile)) {
-            $content = file_get_contents($readmeFile);
-            $pattern = '/^(Stable tag:\s*)(.*)$/mi';
-            $replacement = '${1}' . $newVersion;
-            $newContent = preg_replace($pattern, $replacement, $content);
+        if ($readme_file && file_exists($readme_file)) {
+            $file_content = file_get_contents($readme_file);
+            $regex_pattern = '/^(Stable tag:\s*)(.*)$/mi';
+            $replacement = '${1}' . $new_version_string;
+            $new_file_content = preg_replace($regex_pattern, $replacement, $file_content);
 
-            if ($newContent !== $content) {
-                if (file_put_contents($readmeFile, $newContent) !== false) {
-                    $output->writeln("<info>Updated stable tag in {$readmeFile}</info>");
+            if ($new_file_content !== $file_content) {
+                if (file_put_contents($readme_file, $new_file_content) !== false) {
+                    $output->writeln("<info>Updated stable tag in {$readme_file}</info>");
                 } else {
-                    $output->writeln("<error>Failed to update stable tag in {$readmeFile}</error>");
-                    $success = false;
+                    $output->writeln("<error>Failed to update stable tag in {$readme_file}</error>");
+                    $update_success = false;
                 }
             } else {
-                $output->writeln("<comment>Could not find stable tag line in {$readmeFile}, skipping.</comment>");
+                $output->writeln("<comment>Could not find stable tag line in {$readme_file}, skipping.</comment>");
             }
         }
-        return $success;
+        return $update_success;
     }
 
-    public function isValidVersion(string $version): bool
+    public function is_valid_version(string $version): bool
     {
         $pattern = '/^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+)?$/';
         return (bool) preg_match($pattern, $version);
     }
 
-    private function incrementMajor(string $version): string
+    private function increment_major(string $version): string
     {
         $version = ltrim($version, 'v');
         preg_match('/^(\d+)\.(\d+)\.(\d+)(.*)?$/', $version, $matches);
@@ -146,7 +149,7 @@ class VersionManager
         return ($major + 1) . '.0.0';
     }
 
-    private function incrementMinor(string $version): string
+    private function increment_minor(string $version): string
     {
         $version = ltrim($version, 'v');
         preg_match('/^(\d+)\.(\d+)\.(\d+)(.*)?$/', $version, $matches);
@@ -158,7 +161,7 @@ class VersionManager
         return $major . '.' . ($minor + 1) . '.0';
     }
 
-    private function incrementPatch(string $version): string
+    private function increment_patch(string $version): string
     {
         $version = ltrim($version, 'v');
         preg_match('/^(\d+)\.(\d+)\.(\d+)(.*)?$/', $version, $matches);
@@ -171,7 +174,7 @@ class VersionManager
         return $major . '.' . $minor . '.' . ($patch + 1);
     }
 
-    private function incrementPreRelease(string $version, string $prefix): string
+    private function increment_pre_release(string $version, string $prefix): string
     {
         $version = ltrim($version, 'v');
         preg_match('/^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?/', $version, $matches);
@@ -182,13 +185,13 @@ class VersionManager
         $major = $matches[1];
         $minor = $matches[2];
         $patch = $matches[3];
-        $preRelease = $matches[4] ?? '';
+        $pre_release_string = $matches[4] ?? '';
 
-        if ($preRelease && strpos($preRelease, $prefix) === 0) {
-            $isPreRelease = preg_match("/{$prefix}\.(\d+)/", $preRelease, $numMatches);
-            if ($isPreRelease) {
-                $num = (int)$numMatches[1];
-                return "{$major}.{$minor}.{$patch}-{$prefix}." . ($num + 1);
+        if ($pre_release_string && strpos($pre_release_string, $prefix) === 0) {
+            $is_pre_release_match = preg_match("/{$prefix}\.(\d+)/", $pre_release_string, $number_matches);
+            if ($is_pre_release_match) {
+                $version_number = (int)$number_matches[1];
+                return "{$major}.{$minor}.{$patch}-{$prefix}." . ($version_number + 1);
             }
         }
         return "{$major}.{$minor}.{$patch}-{$prefix}.1";

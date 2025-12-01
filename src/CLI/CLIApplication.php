@@ -26,9 +26,7 @@ use WPMoo\CLI\Commands\DeployCommand;
 use WPMoo\CLI\Commands\UpdateCommand;
 use WPMoo\CLI\Support\Banner;
 
-/**
- * CLI Application class to register and run commands.
- */
+
 class CLIApplication extends Application
 {
     /**
@@ -41,15 +39,15 @@ class CLIApplication extends Application
         parent::__construct('WPMoo CLI', $version);
 
         // Register commands based on project context.
-        $this->registerCommandsByContext();
+        $this->register_commands_by_context();
     }
 
     /**
      * Register commands based on the current project context.
      */
-    private function registerCommandsByContext(): void
+    private function register_commands_by_context(): void
     {
-        $context = $this->identifyProjectContext();
+        $context = $this->identify_project_context();
 
         // Always register essential commands.
         $commands = array(
@@ -85,32 +83,32 @@ class CLIApplication extends Application
      *
      * @return string Context: 'wpmoo-cli', 'wpmoo', or 'wpmoo-plugin'
      */
-    private function identifyProjectContext(): string
+    private function identify_project_context(): string
     {
-        $cwd = getcwd();
-        if (!$cwd) {
+        $current_working_directory = getcwd();
+        if (!$current_working_directory) {
             return 'wpmoo-plugin'; // Default to plugin behavior.
         }
 
-        $composerFile = $cwd . '/composer.json';
+        $composer_file = $current_working_directory . '/composer.json';
 
-        if (file_exists($composerFile)) {
-            $composerData = json_decode(file_get_contents($composerFile), true);
-            if (isset($composerData['name'])) {
-                $packageName = $composerData['name'];
+        if (file_exists($composer_file)) {
+            $composer_data = json_decode(file_get_contents($composer_file), true);
+            if (isset($composer_data['name'])) {
+                $package_name = $composer_data['name'];
 
-                if ($packageName === 'wpmoo/wpmoo-cli') {
+                if ($package_name === 'wpmoo/wpmoo-cli') {
                     return 'wpmoo-cli';
-                } elseif ($packageName === 'wpmoo/wpmoo') {
+                } elseif ($package_name === 'wpmoo/wpmoo') {
                     return 'wpmoo-framework';
                 }
             }
         }
 
         // Check if this looks like a WPMoo-based plugin by looking for WPMoo usage.
-        $phpFiles = glob($cwd . '/*.php');
-        if ($phpFiles) {
-            foreach ($phpFiles as $file) {
+        $php_files = glob($current_working_directory . '/*.php');
+        if ($php_files) {
+            foreach ($php_files as $file) {
                 $content = file_get_contents($file);
                 // Look for WPMoo in plugin header or usage.
                 if (
@@ -151,22 +149,22 @@ class CLIApplication extends Application
     protected function getDefaultCommands(): array
     {
         // Return only essential commands (but without default options).
-        $defaultCommands = parent::getDefaultCommands();
+        $default_commands = parent::getDefaultCommands();
 
         // Filter to only include commands we want (ListCommand).
-        $filteredCommands = array();
-        foreach ($defaultCommands as $command) {
+        $filtered_commands = array();
+        foreach ($default_commands as $command) {
             // Keep only ListCommand and HelpCommand.
             if ($command instanceof ListCommand) {
-                $filteredCommands[] = $command;
+                $filtered_commands[] = $command;
             } elseif ($command instanceof HelpCommand) {
                 // Keep HelpCommand for functionality, but hide it.
                 $command->setHidden(true);
-                $filteredCommands[] = $command;
+                $filtered_commands[] = $command;
             }
         }
 
-        return $filteredCommands;
+        return $filtered_commands;
     }
 
     /**
@@ -177,7 +175,7 @@ class CLIApplication extends Application
     protected function getDefaultInputDefinition(): InputDefinition
     {
         // Create the default input definition with standard Symfony Console options.
-        $inputDefinition = new InputDefinition(array(
+        $input_definition = new InputDefinition(array(
             // 1. Command argument (optional - let Symfony handle this properly).
             new InputArgument(
                 'command',
@@ -212,7 +210,7 @@ class CLIApplication extends Application
             ),
         ));
 
-        return $inputDefinition;
+        return $input_definition;
     }
 
     /**
@@ -222,12 +220,12 @@ class CLIApplication extends Application
      */
     public function getVersion(): string
     {
-        $composerFile = dirname(__DIR__, 3) . '/composer.json';
+        $composer_file = dirname(__DIR__, 3) . '/composer.json';
 
-        if (file_exists($composerFile)) {
-            $composerData = json_decode(file_get_contents($composerFile), true);
-            if (isset($composerData['version'])) {
-                return $composerData['version'];
+        if (file_exists($composer_file)) {
+            $composer_data = json_decode(file_get_contents($composer_file), true);
+            if (isset($composer_data['version'])) {
+                return $composer_data['version'];
             }
         }
 

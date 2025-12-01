@@ -1,29 +1,31 @@
 <?php
 
-/**
- * POT file generator for WPMoo CLI.
- *
- * @package WPMoo\CLI\Support
- * @since 0.1.0
- */
-
 namespace WPMoo\CLI\Support;
 
 use Gettext\Extractors\PhpCode;
 use Gettext\Translations;
 use Gettext\Generators\Po;
 
+/**
+ * POT file generator for WPMoo CLI.
+ *
+ * @package WPMoo\CLI\Support
+ * @since 0.1.0
+ * @link https://wpmoo.org   WPMoo – WordPress Micro Object-Oriented Framework.
+ * @link https://github.com/wpmoo/wpmoo-cli   GitHub Repository.
+ * @license https://spdx.org/licenses/GPL-2.0-or-later.html   GPL-2.0-or-later
+ */
 class PotGenerator
 {
     /**
      * Generate a .pot file for the WPMoo framework.
      *
-     * @param string $sourcePath The path to the source code to scan.
-     * @param string $outputFile The full path for the output .pot file.
+     * @param string $source_path The path to the source code to scan.
+     * @param string $output_file The full path for the output .pot file.
      * @param array  $exclude    An array of directory names to exclude from the scan.
      * @return bool True on success, false on failure.
      */
-    public function generate(string $sourcePath, string $outputFile, array $exclude = []): bool
+    public function generate_pot_file(string $source_path, string $output_file, array $exclude = []): bool
     {
         $translations = new Translations();
         $translations->setDomain('wpmoo');
@@ -35,7 +37,7 @@ class PotGenerator
         ];
 
         // Extract translations from the source path - scan directory for PHP files.
-        $this->extractFromDirectory($sourcePath, $translations, $options);
+        $this->extract_from_directory($source_path, $translations, $options);
 
         // Set headers.
         $translations->setHeader('Project-Id-Version', 'WPMoo Framework');
@@ -44,16 +46,16 @@ class PotGenerator
         $translations->setHeader('Content-Type', 'text/plain; charset=UTF-8');
 
         // Generate the .pot file content.
-        $potContent = Po::toString($translations);
+        $pot_content = Po::toString($translations);
 
         // Ensure the output directory exists.
-        $outputDir = dirname($outputFile);
-        if (!is_dir($outputDir)) {
-            mkdir($outputDir, 0755, true);
+        $output_dir = dirname($output_file);
+        if (!is_dir($output_dir)) {
+            mkdir($output_dir, 0755, true);
         }
 
         // Save the file.
-        return file_put_contents($outputFile, $potContent) !== false;
+        return file_put_contents($output_file, $pot_content) !== false;
     }
 
     /**
@@ -64,7 +66,7 @@ class PotGenerator
      * @param array $options Options for extraction.
      * @return void
      */
-    private function extractFromDirectory(string $directory, Translations $translations, array $options = []): void
+    private function extract_from_directory(string $directory, Translations $translations, array $options = []): void
     {
         $excluded_dirs = $options['excluded_directories'] ?? [];
         $iterator = new \RecursiveIteratorIterator(
@@ -74,18 +76,18 @@ class PotGenerator
         foreach ($iterator as $file) {
             if ($file->isFile() && $file->getExtension() === 'php') {
                 // Check if file is in an excluded directory.
-                $filePath = $file->getPathname();
-                $shouldSkip = false;
+                $file_path = $file->getPathname();
+                $should_skip = false;
 
                 foreach ($excluded_dirs as $excluded_dir) {
-                    if (strpos($filePath, $excluded_dir) !== false) {
-                        $shouldSkip = true;
+                    if (strpos($file_path, $excluded_dir) !== false) {
+                        $should_skip = true;
                         break;
                     }
                 }
 
-                if (!$shouldSkip) {
-                    $translations->addFromPhpCodeFile($filePath, $options);
+                if (!$should_skip) {
+                    $translations->addFromPhpCodeFile($file_path, $options);
                 }
             }
         }

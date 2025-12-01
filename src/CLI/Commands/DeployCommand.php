@@ -1,14 +1,5 @@
 <?php
 
-/**
- * Deploy command for the WPMoo CLI.
- *
- * Handles the deployment process of the WPMoo framework to the WordPress.org SVN repository.
- *
- * @package WPMoo\CLI\Commands
- * @since 0.1.0
- */
-
 namespace WPMoo\CLI\Commands;
 
 use WPMoo\CLI\Support\BaseCommand;
@@ -21,6 +12,14 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Process\Process;
 
+/**
+ * Deploy command for the WPMoo CLI.
+ *
+ * Handles the deployment process of the WPMoo framework to the WordPress.org SVN repository.
+ *
+ * @package WPMoo\CLI\Commands
+ * @since 0.1.0
+ */
 class DeployCommand extends BaseCommand
 {
     /**
@@ -42,7 +41,7 @@ class DeployCommand extends BaseCommand
             ->addOption('build-only', null, InputOption::VALUE_NONE, 'Only build the distributable package in a `dist` folder and exit.');
     }
 
-    public function handleExecute(InputInterface $input, OutputInterface $output): int
+    public function handle_execute(InputInterface $input, OutputInterface $output): int
     {
         $project = $this->identifyProject();
         if ($project['type'] !== 'wpmoo-framework' && $project['type'] !== 'wpmoo-plugin') {
@@ -86,7 +85,7 @@ class DeployCommand extends BaseCommand
 
         // 2. Build assets.
         $output->writeln('> Building assets with Gulp...');
-        $this->runProcess(['gulp', 'build'], $output);
+        $this->run_process(['gulp', 'build'], $output);
 
         // 3. Generate POT file.
         $output->writeln('> Generating .pot file...');
@@ -118,7 +117,7 @@ class DeployCommand extends BaseCommand
             $this->runProcess(['rm', '-rf', $build_path], $output);
         }
         $this->runProcess(['mkdir', $build_path], $output);
-        $this->runShellCommand('git archive HEAD | tar -x -C ' . escapeshellarg($build_path), $output, true);
+        $this->run_shell_command_wrapper('git archive HEAD | tar -x -C ' . escapeshellarg($build_path), $output, true);
 
         // After git archive, copy built assets if they exist (e.g. from build processes)
         $srcAssetsPath = $this->getCwd() . '/src/assets';
@@ -176,15 +175,15 @@ class DeployCommand extends BaseCommand
 
         if (!$input->getOption('build-only')) {
             // 8. Handle SVN.
-            $this->handleSvn($output);
+            $this->handle_svn($output);
 
             // 9. Copy files to trunk.
             $output->writeln('> Copying files to SVN trunk...');
-            $this->rsync("{$build_path}/", "{$this->svn_path}/trunk/", $output);
+            $this->rsync_wrapper("{$build_path}/", "{$this->svn_path}/trunk/", $output);
 
             // 10. Add/remove files in SVN.
             $output->writeln('> Staging SVN changes...');
-            $this->svnStatus();
+            $this->svn_status();
 
             // 11. Commit to SVN trunk.
             if ($input->getOption('dry-run')) {
@@ -199,7 +198,7 @@ class DeployCommand extends BaseCommand
 
             // 12. Create SVN tag.
             $output->writeln("> Handling SVN tag for version {$new_version}...");
-            $this->svnTag($new_version, $output, $input->getOption('dry-run'));
+            $this->svn_tag($new_version, $output, $input->getOption('dry-run'));
 
             // 13. Git push commit and tags.
             $output->writeln("> Pushing Git commit and tags...");
@@ -221,7 +220,7 @@ class DeployCommand extends BaseCommand
         return self::SUCCESS;
     }
 
-    private function runProcess(array $command, OutputInterface $output, bool $quiet = false, ?string $cwd = null)
+    private function run_process(array $command_args, OutputInterface $output, bool $is_quiet = false, ?string $current_working_directory = null)
     {
         $process = new Process($command, $cwd);
         $process->mustRun(function ($type, $buffer) use ($output, $quiet) {
@@ -231,7 +230,7 @@ class DeployCommand extends BaseCommand
         });
     }
 
-    private function runShellCommand(string $command, OutputInterface $output, bool $quiet = false, ?string $cwd = null)
+    private function run_shell_command_wrapper(string $shell_command, OutputInterface $output, bool $is_quiet = false, ?string $current_working_directory = null)
     {
         $process = Process::fromShellCommandline($command, $cwd);
         $process->mustRun(function ($type, $buffer) use ($output, $quiet) {
@@ -241,7 +240,7 @@ class DeployCommand extends BaseCommand
         });
     }
 
-    private function handleSvn(OutputInterface $output)
+    private function handle_svn(OutputInterface $output)
     {
         if (is_dir($this->svn_path)) {
             $output->writeln('> Updating existing SVN checkout...');
@@ -252,25 +251,25 @@ class DeployCommand extends BaseCommand
         }
     }
 
-    private function rsync(string $source, string $destination, OutputInterface $output)
+    private function rsync_wrapper(string $source_path, string $destination_path, OutputInterface $output)
     {
         $command = ['rsync', '-r', '--delete', $source, $destination];
         $this->runProcess($command, $output);
     }
 
-    private function svnStatus()
+    private function svn_status()
     {
-        $process = new Process(['svn', 'status'], $this->svn_path);
-        $process->run();
-        $statusOutput = $process->getOutput();
+        $svn_process = new Process(['svn', 'status'], $this->svn_path);
+        $svn_process->run();
+        $status_output = $svn_process->getOutput();
 
-        foreach (explode("\n", $statusOutput) as $line) {
-            if (empty($line)) {
+        foreach (explode("\n", $status_output) as $status_line) {
+            if (empty($status_line)) {
                 continue;
             }
-            $parts = preg_split('/\s+/', $line);
-            $action = $parts[0];
-            $file = $parts[1];
+            $line_parts = preg_split('/\s+/', $status_line);
+            $action = $line_parts[0];
+            $file = $line_parts[1];
 
             if ($action === '?') { // Not under version control.
                 (new Process(['svn', 'add', $file], $this->svn_path))->mustRun();
@@ -280,21 +279,21 @@ class DeployCommand extends BaseCommand
         }
     }
 
-    private function svnTag(string $version, OutputInterface $output, bool $isDryRun)
+    private function svn_tag(string $version_string, OutputInterface $output, bool $is_dry_run)
     {
-        $tagPath = "{$this->svn_path}/tags/{$version}";
-        if (is_dir($tagPath)) {
-            $output->writeln("<comment>SVN tag for version {$version} already exists.</comment>");
+        $tag_path = "{$this->svn_path}/tags/{$version_string}";
+        if (is_dir($tag_path)) {
+            $output->writeln("<comment>SVN tag for version {$version_string} already exists.</comment>");
             return;
         }
 
-        $output->writeln("> Creating SVN tag for version {$version}...");
-        $this->runProcess(['svn', 'copy', "{$this->svn_path}/trunk", $tagPath], $output);
+        $output->writeln("> Creating SVN tag for version {$version_string}...");
+        $this->run_process(['svn', 'copy', "{$this->svn_path}/trunk", $tag_path], $output);
 
-        if ($isDryRun) {
+        if ($is_dry_run) {
             $output->writeln("<comment>DRY RUN: Skipping SVN tag commit.</comment>");
         } else {
-            $this->runProcess(['svn', 'commit', '-m', "Tagging version {$version}"], $output, false, $this->svn_path);
+            $this->run_process(['svn', 'commit', '-m', "Tagging version {$version_string}"], $output, false, $this->svn_path);
         }
     }
 }

@@ -16,9 +16,7 @@ namespace WPMoo\CLI;
 
 use WPMoo\CLI\CLIApplication;
 
-/**
- * CLI bootstrap class to run the application.
- */
+
 class CLI
 {
     /**

@@ -1,5 +1,14 @@
 <?php
 
+namespace WPMoo\CLI\Commands;
+
+use WPMoo\CLI\Support\BaseCommand;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Process\Process;
+use Symfony\Component\Filesystem\Filesystem;
+
 /**
  * Update command for the WPMoo CLI.
  *
@@ -12,18 +21,6 @@
  * @license https://spdx.org/licenses/GPL-2.0-or-later.html GPL-2.0-or-later
  */
 
-namespace WPMoo\CLI\Commands;
-
-use WPMoo\CLI\Support\BaseCommand;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Process\Process;
-use Symfony\Component\Filesystem\Filesystem;
-
-/**
- * Update command to refresh the plugin with build processes.
- */
 class UpdateCommand extends BaseCommand
 {
     /**
@@ -43,50 +40,50 @@ class UpdateCommand extends BaseCommand
      * @param OutputInterface $output Command output.
      * @return int Exit status (0 for success, non-zero for failure).
      */
-    public function handleExecute(InputInterface $input, OutputInterface $output): int
-    {
-        $io = new SymfonyStyle($input, $output);
-
-        $io->title('WPMoo Plugin Update');
-
-        $projectInfo = $this->identifyProject();
-        if ($projectInfo['type'] !== 'wpmoo-plugin') {
-            $io->error('The "update" command can only be run from inside a WPMoo-based plugin.');
-            return 1;
+        public function handle_execute(InputInterface $input, OutputInterface $output): int
+        {
+            $symfony_io = new SymfonyStyle($input, $output);
+    
+            $symfony_io->title('WPMoo Plugin Update');
+    
+        $project_info = $this->identify_project();
+        if ($project_info['type'] !== 'wpmoo-plugin') {
+                $symfony_io->error('The "update" command can only be run from inside a WPMoo-based plugin.');
+                return 1;
+            }
+    
+            $symfony_io->section('Starting Update Process');
+    
+            // 1. Build assets with Gulp
+            $symfony_io->writeln('> Building assets with Gulp...');
+            if ($this->run_gulp_build($output)) {
+                $symfony_io->success('Assets built successfully.');
+            } else {
+                $symfony_io->error('Asset building failed.');
+                return 1;
+            }
+    
+            // 2. Update translations
+            $symfony_io->writeln('> Generating .pot file...');
+            if ($this->run_pot_generation($output)) {
+                $symfony_io->success('Translations updated successfully.');
+            } else {
+                $symfony_io->error('Translation generation failed.');
+                return 1;
+            }
+    
+            // 3. Copy framework files
+            $symfony_io->writeln('> Copying WPMoo framework to framework directory...');
+            if ($this->copy_framework_files($output)) {
+                $symfony_io->success('WPMoo framework copied successfully.');
+            } else {
+                $symfony_io->error('Framework copying failed.');
+                return 1;
+            }
+    
+            $symfony_io->success('Update process completed successfully!');
+            return 0;
         }
-
-        $io->section('Starting Update Process');
-
-        // 1. Build assets with Gulp
-        $io->writeln('> Building assets with Gulp...');
-        if ($this->runGulpBuild($output)) {
-            $io->success('Assets built successfully.');
-        } else {
-            $io->error('Asset building failed.');
-            return 1;
-        }
-
-        // 2. Update translations
-        $io->writeln('> Generating .pot file...');
-        if ($this->runPotGeneration($output)) {
-            $io->success('Translations updated successfully.');
-        } else {
-            $io->error('Translation generation failed.');
-            return 1;
-        }
-
-        // 3. Copy framework files
-        $io->writeln('> Copying WPMoo framework to framework directory...');
-        if ($this->copyFrameworkFiles($output)) {
-            $io->success('WPMoo framework copied successfully.');
-        } else {
-            $io->error('Framework copying failed.');
-            return 1;
-        }
-
-        $io->success('Update process completed successfully!');
-        return 0;
-    }
 
     /**
      * Run gulp build command.
@@ -94,7 +91,7 @@ class UpdateCommand extends BaseCommand
      * @param OutputInterface $output The output interface.
      * @return bool True on success, false on failure.
      */
-    private function runGulpBuild(OutputInterface $output): bool
+    private function run_gulp_build(OutputInterface $output): bool
     {
         try {
             $process = new Process(['gulp', 'build']);
@@ -116,16 +113,17 @@ class UpdateCommand extends BaseCommand
      * @param OutputInterface $output The output interface.
      * @return bool True on success, false on failure.
      */
-    private function runPotGeneration(OutputInterface $output): bool
+    private function run_pot_generation(OutputInterface $output): bool
     {
         try {
             // Using the PotGenerator class from the CLI support
-            $potGenerator = new \WPMoo\CLI\Support\PotGenerator();
-            $sourcePath = $this->getCwd() . '/src';
-            $outputPath = $this->getCwd() . '/languages/wpmoo.pot';
+            $pot_generator = new \WPMoo\CLI\Support\PotGenerator();
+            $source_path = $this->get_cwd() . '/src';
+            $output_path = $this->get_cwd() . '/languages/wpmoo.pot';
             $exclude = ['samples', 'vendor', 'node_modules'];
 
-            $result = $potGenerator->generate($sourcePath, $outputPath, $exclude);
+            // The method generate has been renamed to generate_pot_file.
+            $result = $pot_generator->generate_pot_file($source_path, $output_path, $exclude);
 
             return $result;
         } catch (\Exception $e) {
@@ -140,43 +138,44 @@ class UpdateCommand extends BaseCommand
      * @param OutputInterface $output The output interface.
      * @return bool True on success, false on failure.
      */
-    private function copyFrameworkFiles(OutputInterface $output): bool
+    private function copy_framework_files(OutputInterface $output): bool
     {
         try {
             // In the CLI context, we need to get the current working directory properly
-            $cwd = getcwd();
-            $sourceDir = $cwd . '/vendor/wpmoo/wpmoo/src';
-            $destDir = $cwd . '/framework';
+            $current_working_directory = getcwd();
+            $source_directory = $current_working_directory . '/vendor/wpmoo/wpmoo/src';
+            $destination_directory = $current_working_directory . '/framework';
 
-            if (!is_dir($sourceDir)) {
-                throw new \Exception("WPMoo source directory does not exist: {$sourceDir}");
+            if (!is_dir($source_directory)) {
+                throw new \Exception("WPMoo source directory does not exist: {$source_directory}");
             }
 
             // Remove destination if it exists
-            if (is_dir($destDir)) {
-                $this->removeDirectoryRecursively($destDir);
+            if (is_dir($destination_directory)) {
+                $filesystem = new Filesystem();
+                $filesystem->remove($destination_directory);
             }
 
             // Create destination directory
-            if (!mkdir($destDir, 0755, true) && !is_dir($destDir)) {
-                throw new \Exception("Cannot create destination directory: {$destDir}");
+            if (!mkdir($destination_directory, 0755, true) && !is_dir($destination_directory)) {
+                throw new \Exception("Cannot create destination directory: {$destination_directory}");
             }
 
             // Use Symfony filesystem component for more reliable directory copying
-            $fs = new Filesystem();
-            $fs->mirror($sourceDir, $destDir . '/src');
+            $filesystem = new Filesystem();
+            $filesystem->mirror($source_directory, $destination_directory . '/src');
 
             // Copy the samples directory (needed for demo functionality when framework is loaded as plugin)
-            $samplesSource = $cwd . '/vendor/wpmoo/wpmoo/samples';
-            if (is_dir($samplesSource)) {
-                $fs->mirror($samplesSource, $destDir . '/samples');
+            $samples_source = $current_working_directory . '/vendor/wpmoo/wpmoo/samples';
+            if (is_dir($samples_source)) {
+                $filesystem->mirror($samples_source, $destination_directory . '/samples');
             }
 
             // Copy the LICENSE file
-            $licenseSource = $cwd . '/vendor/wpmoo/wpmoo/LICENSE';
-            $licenseDest = $destDir . '/LICENSE';
-            if (file_exists($licenseSource)) {
-                $fs->copy($licenseSource, $licenseDest);
+            $license_source = $current_working_directory . '/vendor/wpmoo/wpmoo/LICENSE';
+            $license_destination = $destination_directory . '/LICENSE';
+            if (file_exists($license_source)) {
+                $filesystem->copy($license_source, $license_destination);
             }
 
             return true;
@@ -186,53 +185,7 @@ class UpdateCommand extends BaseCommand
         }
     }
 
-    /**
-     * Recursively copy a directory.
-     *
-     * @param string $source Source directory
-     * @param string $dest Destination directory
-     * @return void
-     */
-    private function copyDirectoryRecursively(string $source, string $dest): void
-    {
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS)
-        );
 
-        foreach ($iterator as $item) {
-            $destPath = $dest . '/' . $iterator->getSubPathname();
 
-            if ($item->isDir()) {
-                if (!is_dir($destPath)) {
-                    mkdir($destPath, 0755, true);
-                }
-            } else {
-                copy($item->getPathname(), $destPath);
-            }
-        }
-    }
 
-    /**
-     * Recursively remove a directory.
-     *
-     * @param string $dir Directory to remove
-     * @return void
-     */
-    private function removeDirectoryRecursively(string $dir): void
-    {
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::CHILD_FIRST
-        );
-
-        foreach ($iterator as $item) {
-            if ($item->isDir()) {
-                rmdir($item->getPathname());
-            } else {
-                unlink($item->getPathname());
-            }
-        }
-
-        rmdir($dir);
-    }
 }

@@ -1,5 +1,12 @@
 <?php
 
+namespace WPMoo\CLI\Commands;
+
+use WPMoo\CLI\Support\BaseCommand;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
+
 /**
  * Info command for the WPMoo CLI.
  *
@@ -10,17 +17,6 @@
  * @link  https://wpmoo.org WPMoo – WordPress Micro Object-Oriented Framework.
  * @link  https://github.com/wpmoo/wpmoo GitHub Repository.
  * @license https://spdx.org/licenses/GPL-2.0-or-later.html GPL-2.0-or-later
- */
-
-namespace WPMoo\CLI\Commands;
-
-use WPMoo\CLI\Support\BaseCommand;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
-
-/**
- * Info command to provide environment information.
  */
 class InfoCommand extends BaseCommand
 {
@@ -41,18 +37,18 @@ class InfoCommand extends BaseCommand
      * @param OutputInterface $output Command output.
      * @return int Exit status (0 for success, non-zero for failure).
      */
-    public function handleExecute(InputInterface $input, OutputInterface $output): int
+    public function handle_execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
+        $symfony_io = new SymfonyStyle($input, $output);
 
-        $php = PHP_VERSION;
-        $wp  = function_exists('get_bloginfo') ? get_bloginfo('version') : 'n/a (CLI)';
+        $php_version = PHP_VERSION;
+        $wordpress_version  = function_exists('get_bloginfo') ? get_bloginfo('version') : 'n/a (CLI)';
 
-        $io->title('WPMoo — WordPress Micro OOP Framework');
+        $symfony_io->title('WPMoo — WordPress Micro OOP Framework');
 
-        $io->writeln("<info>PHP Version:</info>     {$php}");
-        $io->writeln("<info>WordPress Version:</info> {$wp}");
-        $io->newLine();
+        $symfony_io->writeln("<info>PHP Version:</info>     {$php_version}");
+        $symfony_io->writeln("<info>WordPress Version:</info> {$wordpress_version}");
+        $symfony_io->newLine();
 
         return 0;
     }

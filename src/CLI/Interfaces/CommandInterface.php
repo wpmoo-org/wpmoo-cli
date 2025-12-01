@@ -17,9 +17,7 @@ namespace WPMoo\CLI\Interfaces;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-/**
- * Interface for CLI commands.
- */
+
 interface CommandInterface
 {
     /**
@@ -29,5 +27,5 @@ interface CommandInterface
      * @param OutputInterface $output Command output.
      * @return int Exit status (0 for success, non-zero for failure).
      */
-    public function handleExecute(InputInterface $input, OutputInterface $output): int;
+    public function handle_execute(InputInterface $input, OutputInterface $output): int;
 }

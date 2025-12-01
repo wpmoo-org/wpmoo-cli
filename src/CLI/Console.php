@@ -14,9 +14,7 @@
 
 namespace WPMoo\CLI;
 
-/**
- * Console helper to provide output methods.
- */
+
 class Console
 {
     /**
@@ -25,9 +23,9 @@ class Console
      * @param string $message Message to write.
      * @return void
      */
-    public static function info(string $message)
+    public static function info_message(string $message)
     {
-        self::write('<info>' . $message . '</info>');
+        self::write_output('<info>' . $message . '</info>');
     }
 
     /**
@@ -36,9 +34,9 @@ class Console
      * @param string $message Message to write.
      * @return void
      */
-    public static function comment(string $message)
+    public static function comment_message(string $message)
     {
-        self::write('<comment>' . $message . '</comment>');
+        self::write_output('<comment>' . $message . '</comment>');
     }
 
     /**
@@ -47,9 +45,9 @@ class Console
      * @param string $message Message to write.
      * @return void
      */
-    public static function warning(string $message)
+    public static function warning_message(string $message)
     {
-        self::write('<fg=yellow>' . $message . '</>');
+        self::write_output('<fg=yellow>' . $message . '</>');
     }
 
     /**
@@ -58,9 +56,9 @@ class Console
      * @param string $message Message to write.
      * @return void
      */
-    public static function error(string $message)
+    public static function error_message(string $message)
     {
-        self::write('<error>' . $message . '</error>');
+        self::write_output('<error>' . $message . '</error>');
     }
 
     /**
@@ -69,7 +67,7 @@ class Console
      * @param string $message Message to write.
      * @return void
      */
-    public static function line(string $message = '')
+    public static function write_line(string $message = '')
     {
         fwrite(STDOUT, $message . "\n");
     }
@@ -80,7 +78,7 @@ class Console
      * @param string $message Message to write.
      * @return void
      */
-    private static function write(string $message)
+    private static function write_output(string $message)
     {
         fwrite(STDOUT, $message . "\n");
     }
