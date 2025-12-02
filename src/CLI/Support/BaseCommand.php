@@ -35,14 +35,14 @@ abstract class BaseCommand extends Command implements CommandInterface
 
         // Define custom styles.
         $formatter = $output->getFormatter();
-        $formatter->setStyle('important', new OutputFormatterStyle('yellow', null, ['bold']));
+        $formatter->setStyle('important', new OutputFormatterStyle('yellow', null, [ 'bold' ]));
         $formatter->setStyle('question', new OutputFormatterStyle('black', 'yellow'));
         $formatter->setStyle('warning', new OutputFormatterStyle('black', 'yellow')); // More appropriate warning style.
-        $formatter->setStyle('success', new OutputFormatterStyle('green', null, ['bold']));
-        $formatter->setStyle('error', new OutputFormatterStyle('white', 'red', ['bold']));
-        $formatter->setStyle('info', new OutputFormatterStyle('cyan', null, ['bold']));
+        $formatter->setStyle('success', new OutputFormatterStyle('green', null, [ 'bold' ]));
+        $formatter->setStyle('error', new OutputFormatterStyle('white', 'red', [ 'bold' ]));
+        $formatter->setStyle('info', new OutputFormatterStyle('cyan', null, [ 'bold' ]));
         $formatter->setStyle('comment', new OutputFormatterStyle('yellow'));
-        $formatter->setStyle('highlight', new OutputFormatterStyle('black', 'cyan', ['bold']));
+        $formatter->setStyle('highlight', new OutputFormatterStyle('black', 'cyan', [ 'bold' ]));
 
         return $this->handle_execute($input, $output);
     }
@@ -123,7 +123,7 @@ abstract class BaseCommand extends Command implements CommandInterface
                 'found' => true,
                 'type' => 'wpmoo-framework',
                 'main_file' => $wpmoo_root_path,
-                'readme_file' => $current_working_directory . '/readme.txt' // Check if readme.txt exists.
+                'readme_file' => $current_working_directory . '/readme.txt', // Check if readme.txt exists.
             ];
         }
 
@@ -135,15 +135,15 @@ abstract class BaseCommand extends Command implements CommandInterface
                 // Look for WPMoo in plugin header.
                 if (
                     preg_match('/(wpmoo|WPMoo)/i', $content) &&
-                    (preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
-                    preg_match('/^[ \t\/*#@]*Theme Name:/im', $content))
+                    ( preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
+                    preg_match('/^[ \t\/*#@]*Theme Name:/im', $content) )
                 ) {
                     $readme_path = $current_working_directory . '/readme.txt';
                     return [
                         'found' => true,
                         'type' => 'wpmoo-plugin',
                         'main_file' => $file,
-                        'readme_file' => file_exists($readme_path) ? $readme_path : null
+                        'readme_file' => file_exists($readme_path) ? $readme_path : null,
                     ];
                 }
             }
@@ -153,7 +153,7 @@ abstract class BaseCommand extends Command implements CommandInterface
             'found' => false,
             'type' => 'unknown',
             'main_file' => null,
-            'readme_file' => null
+            'readme_file' => null,
         ];
     }
 }

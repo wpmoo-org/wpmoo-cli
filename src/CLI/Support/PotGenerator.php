@@ -33,7 +33,7 @@ class PotGenerator
         // Define options for scanning.
         $options = [
             'excluded_directories' => $exclude,
-            'extract_comments' => ['translators:'],
+            'extract_comments' => [ 'translators:' ],
         ];
 
         // Extract translations from the source path - scan directory for PHP files.
@@ -50,7 +50,7 @@ class PotGenerator
 
         // Ensure the output directory exists.
         $output_dir = dirname($output_file);
-        if (!is_dir($output_dir)) {
+        if (! is_dir($output_dir)) {
             mkdir($output_dir, 0755, true);
         }
 
@@ -86,7 +86,7 @@ class PotGenerator
                     }
                 }
 
-                if (!$should_skip) {
+                if (! $should_skip) {
                     $translations->addFromPhpCodeFile($file_path, $options);
                 }
             }

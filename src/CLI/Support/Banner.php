@@ -20,7 +20,7 @@ class Banner
      */
     public static function get_ascii_art(): string
     {
-        $ascii_raw = <<<EOT
+        $ascii_raw = <<<'EOT'
 
         ░██       ░██ ░█████████  ░███     ░███                       
         ░██       ░██ ░██     ░██ ░████   ░████                       
@@ -32,7 +32,7 @@ class Banner
         
         EOT;
 
-        return self::apply_gradient($ascii_raw, [89, 149, 255], [228, 110, 150]);
+        return self::apply_gradient($ascii_raw, [ 89, 149, 255 ], [ 228, 110, 150 ]);
     }
 
     /**
@@ -69,15 +69,15 @@ class Banner
                 }
 
                 // Calculate the interpolation factor.
-                $percent = $i / ($line_length - 1);
+                $percent = $i / ( $line_length - 1 );
 
                 // Interpolate RGB values.
-                $r = (int) ($start_color[0] + ($end_color[0] - $start_color[0]) * $percent);
-                $g = (int) ($start_color[1] + ($end_color[1] - $start_color[1]) * $percent);
-                $b = (int) ($start_color[2] + ($end_color[2] - $start_color[2]) * $percent);
+                $r = (int) ( $start_color[0] + ( $end_color[0] - $start_color[0] ) * $percent );
+                $g = (int) ( $start_color[1] + ( $end_color[1] - $start_color[1] ) * $percent );
+                $b = (int) ( $start_color[2] + ( $end_color[2] - $start_color[2] ) * $percent );
 
                 // Hex color format.
-                $hex_color = sprintf("#%02x%02x%02x", $r, $g, $b);
+                $hex_color = sprintf('#%02x%02x%02x', $r, $g, $b);
 
                 // Symfony Console color tag.
                 $colored_line .= "<fg=$hex_color>$char</>";

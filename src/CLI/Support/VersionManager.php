@@ -19,6 +19,11 @@ use Symfony\Component\Console\Question\Question;
 
 class VersionManager
 {
+    /**
+     * The command instance.
+     *
+     * @var \Symfony\Component\Console\Command\Command
+     */
     private $command;
 
     public function __construct($command)
@@ -28,24 +33,24 @@ class VersionManager
 
     public function interactive_version_selection(InputInterface $input, OutputInterface $output, string $current): ?string
     {
-        $options = [
-            'patch'      => sprintf("Patch     - Increment patch (x.y.z → x.y.z+1) [<comment>%s</comment>]", $this->increment_patch($current)),
-            'minor'      => sprintf("Minor     - Increment minor (x.y.z → x.y+1.0) [<comment>%s</comment>]", $this->increment_minor($current)),
-            'major'      => sprintf("Major     - Increment major (x.y.z → x+1.0.0) [<comment>%s</comment>]", $this->increment_major($current)),
-            'pre-alpha'  => sprintf("Pre-alpha - Pre-alpha (x.y.z → x.y.z-alpha.1) [<comment>%s</comment>]", $this->increment_pre_release($current, 'alpha')),
-            'pre-beta'   => sprintf("Pre-beta  - Pre-beta (x.y.z → x.y.z-beta.1) [<comment>%s</comment>]", $this->increment_pre_release($current, 'beta')),
-            'pre-rc'     => sprintf("Pre-RC    - Pre-release candidate (x.y.z → x.y.z-rc.1) [<comment>%s</comment>]", $this->increment_pre_release($current, 'rc')),
+        $selection_options = [
+            'patch'      => sprintf('Patch     - Increment patch (x.y.z → x.y.z+1) [<comment>%s</comment>]', $this->increment_patch($current)),
+            'minor'      => sprintf('Minor     - Increment minor (x.y.z → x.y+1.0) [<comment>%s</comment>]', $this->increment_minor($current)),
+            'major'      => sprintf('Major     - Increment major (x.y.z → x+1.0.0) [<comment>%s</comment>]', $this->increment_major($current)),
+            'pre-alpha'  => sprintf('Pre-alpha - Pre-alpha (x.y.z → x.y.z-alpha.1) [<comment>%s</comment>]', $this->increment_pre_release($current, 'alpha')),
+            'pre-beta'   => sprintf('Pre-beta  - Pre-beta (x.y.z → x.y.z-beta.1) [<comment>%s</comment>]', $this->increment_pre_release($current, 'beta')),
+            'pre-rc'     => sprintf('Pre-RC    - Pre-release candidate (x.y.z → x.y.z-rc.1) [<comment>%s</comment>]', $this->increment_pre_release($current, 'rc')),
             'custom'     => 'Custom    - Enter custom version',
-            'cancel'     => 'Cancel    - Cancel operation'
+            'cancel'     => 'Cancel    - Cancel operation',
         ];
 
-        $question = new ChoiceQuestion('<question>Select version increment type:</question>', $options, 'patch');
-        $question->setErrorMessage('Option %s is invalid.');
+        $choice_question = new ChoiceQuestion('<question>Select version increment type:</question>', $selection_options, 'patch');
+        $choice_question->setErrorMessage('Option %s is invalid.');
 
-        $helper = $this->command->getHelper('question');
-        $choice = $helper->ask($input, $output, $question);
+        $question_helper = $this->command->getHelper('question');
+        $user_choice = $question_helper->ask($input, $output, $choice_question);
 
-        switch ($choice) {
+        switch ($user_choice) {
             case 'cancel':
                 return null;
             case 'patch':
@@ -61,14 +66,16 @@ class VersionManager
             case 'pre-rc':
                 return $this->increment_pre_release($current, 'rc');
             case 'custom':
-                $customQuestion = new Question("Enter new version (current: {$current}): ");
-                $customQuestion->setValidator(function ($answer) {
-        if (!$version_manager->is_valid_version($new_version)) {
-                        throw new \RuntimeException("Invalid version format: {$answer}");
+                $custom_version_question = new Question("Enter new version (current: {$current}): ");
+                $custom_version_question->setValidator(
+                    function ($answer) {
+                        if (! $this->is_valid_version($answer)) {
+                            throw new \RuntimeException("Invalid version format: {$answer}");
+                        }
+                        return $answer;
                     }
-                    return $answer;
-                });
-                return $helper->ask($input, $output, $customQuestion);
+                );
+                return $question_helper->ask($input, $output, $custom_version_question);
             default:
                 return $this->increment_patch($current);
         }
@@ -77,7 +84,7 @@ class VersionManager
     public function get_current_version(array $project_info): string
     {
         $main_file = $project_info['main_file'];
-        if (!$main_file || !file_exists($main_file)) {
+        if (! $main_file || ! file_exists($main_file)) {
             return '0.0.0';
         }
         $file_content = file_get_contents($main_file);
@@ -145,8 +152,8 @@ class VersionManager
         if (count($matches) < 4) {
             return '1.0.0';
         }
-        $major = (int)$matches[1];
-        return ($major + 1) . '.0.0';
+        $major = (int) $matches[1];
+        return ( $major + 1 ) . '.0.0';
     }
 
     private function increment_minor(string $version): string
@@ -156,9 +163,9 @@ class VersionManager
         if (count($matches) < 4) {
             return '0.1.0';
         }
-        $major = (int)$matches[1];
-        $minor = (int)$matches[2];
-        return $major . '.' . ($minor + 1) . '.0';
+        $major = (int) $matches[1];
+        $minor = (int) $matches[2];
+        return $major . '.' . ( $minor + 1 ) . '.0';
     }
 
     private function increment_patch(string $version): string
@@ -168,10 +175,10 @@ class VersionManager
         if (count($matches) < 4) {
             return '0.0.1';
         }
-        $major = (int)$matches[1];
-        $minor = (int)$matches[2];
-        $patch = (int)$matches[3];
-        return $major . '.' . $minor . '.' . ($patch + 1);
+        $major = (int) $matches[1];
+        $minor = (int) $matches[2];
+        $patch = (int) $matches[3];
+        return $major . '.' . $minor . '.' . ( $patch + 1 );
     }
 
     private function increment_pre_release(string $version, string $prefix): string
@@ -190,8 +197,8 @@ class VersionManager
         if ($pre_release_string && strpos($pre_release_string, $prefix) === 0) {
             $is_pre_release_match = preg_match("/{$prefix}\.(\d+)/", $pre_release_string, $number_matches);
             if ($is_pre_release_match) {
-                $version_number = (int)$number_matches[1];
-                return "{$major}.{$minor}.{$patch}-{$prefix}." . ($version_number + 1);
+                $version_number = (int) $number_matches[1];
+                return "{$major}.{$minor}.{$patch}-{$prefix}." . ( $version_number + 1 );
             }
         }
         return "{$major}.{$minor}.{$patch}-{$prefix}.1";

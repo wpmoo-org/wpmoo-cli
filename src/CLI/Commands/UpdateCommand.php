@@ -29,8 +29,8 @@ class UpdateCommand extends BaseCommand
     protected function configure()
     {
         $this->setName('update')
-             ->setDescription('Update the WPMoo plugin with build processes and framework sync')
-             ->setHelp('This command runs build processes, updates translations, and synchronizes the framework directory.');
+            ->setDescription('Update the WPMoo plugin with build processes and framework sync')
+            ->setHelp('This command runs build processes, updates translations, and synchronizes the framework directory.');
     }
 
     /**
@@ -40,50 +40,50 @@ class UpdateCommand extends BaseCommand
      * @param OutputInterface $output Command output.
      * @return int Exit status (0 for success, non-zero for failure).
      */
-        public function handle_execute(InputInterface $input, OutputInterface $output): int
-        {
-            $symfony_io = new SymfonyStyle($input, $output);
-    
-            $symfony_io->title('WPMoo Plugin Update');
-    
+    public function handle_execute(InputInterface $input, OutputInterface $output): int
+    {
+        $symfony_io = new SymfonyStyle($input, $output);
+
+        $symfony_io->title('WPMoo Plugin Update');
+
         $project_info = $this->identify_project();
         if ($project_info['type'] !== 'wpmoo-plugin') {
                 $symfony_io->error('The "update" command can only be run from inside a WPMoo-based plugin.');
                 return 1;
-            }
-    
-            $symfony_io->section('Starting Update Process');
-    
-            // 1. Build assets with Gulp
-            $symfony_io->writeln('> Building assets with Gulp...');
-            if ($this->run_gulp_build($output)) {
-                $symfony_io->success('Assets built successfully.');
-            } else {
-                $symfony_io->error('Asset building failed.');
-                return 1;
-            }
-    
-            // 2. Update translations
-            $symfony_io->writeln('> Generating .pot file...');
-            if ($this->run_pot_generation($output)) {
-                $symfony_io->success('Translations updated successfully.');
-            } else {
-                $symfony_io->error('Translation generation failed.');
-                return 1;
-            }
-    
-            // 3. Copy framework files
-            $symfony_io->writeln('> Copying WPMoo framework to framework directory...');
-            if ($this->copy_framework_files($output)) {
-                $symfony_io->success('WPMoo framework copied successfully.');
-            } else {
-                $symfony_io->error('Framework copying failed.');
-                return 1;
-            }
-    
-            $symfony_io->success('Update process completed successfully!');
-            return 0;
         }
+
+        $symfony_io->section('Starting Update Process');
+
+        // 1. Build assets with Gulp
+        $symfony_io->writeln('> Building assets with Gulp...');
+        if ($this->run_gulp_build($output)) {
+            $symfony_io->success('Assets built successfully.');
+        } else {
+            $symfony_io->error('Asset building failed.');
+            return 1;
+        }
+
+        // 2. Update translations
+        $symfony_io->writeln('> Generating .pot file...');
+        if ($this->run_pot_generation($output)) {
+            $symfony_io->success('Translations updated successfully.');
+        } else {
+            $symfony_io->error('Translation generation failed.');
+            return 1;
+        }
+
+        // 3. Copy framework files
+        $symfony_io->writeln('> Copying WPMoo framework to framework directory...');
+        if ($this->copy_framework_files($output)) {
+            $symfony_io->success('WPMoo framework copied successfully.');
+        } else {
+            $symfony_io->error('Framework copying failed.');
+            return 1;
+        }
+
+        $symfony_io->success('Update process completed successfully!');
+        return 0;
+    }
 
     /**
      * Run gulp build command.
@@ -94,7 +94,7 @@ class UpdateCommand extends BaseCommand
     private function run_gulp_build(OutputInterface $output): bool
     {
         try {
-            $process = new Process(['gulp', 'build']);
+            $process = new Process([ 'gulp', 'build' ]);
             $process->setTimeout(300); // 5 minutes timeout
             $process->mustRun();
 
@@ -120,7 +120,7 @@ class UpdateCommand extends BaseCommand
             $pot_generator = new \WPMoo\CLI\Support\PotGenerator();
             $source_path = $this->get_cwd() . '/src';
             $output_path = $this->get_cwd() . '/languages/wpmoo.pot';
-            $exclude = ['samples', 'vendor', 'node_modules'];
+            $exclude = [ 'samples', 'vendor', 'node_modules' ];
 
             // The method generate has been renamed to generate_pot_file.
             $result = $pot_generator->generate_pot_file($source_path, $output_path, $exclude);
@@ -146,7 +146,7 @@ class UpdateCommand extends BaseCommand
             $source_directory = $current_working_directory . '/vendor/wpmoo/wpmoo/src';
             $destination_directory = $current_working_directory . '/framework';
 
-            if (!is_dir($source_directory)) {
+            if (! is_dir($source_directory)) {
                 throw new \Exception("WPMoo source directory does not exist: {$source_directory}");
             }
 
@@ -157,7 +157,7 @@ class UpdateCommand extends BaseCommand
             }
 
             // Create destination directory
-            if (!mkdir($destination_directory, 0755, true) && !is_dir($destination_directory)) {
+            if (! mkdir($destination_directory, 0755, true) && ! is_dir($destination_directory)) {
                 throw new \Exception("Cannot create destination directory: {$destination_directory}");
             }
 
@@ -184,8 +184,4 @@ class UpdateCommand extends BaseCommand
             return false;
         }
     }
-
-
-
-
 }

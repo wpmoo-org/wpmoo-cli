@@ -1,29 +1,44 @@
 <?xml version="1.0"?>
 <ruleset name="WPMoo CLI">
-  <description>PHPCS rules for the WPMoo CLI package using Symfony Console standards.</description>
+  <description>PHPCS rules for the WPMoo CLI package, allowing snake_case method names.</description>
 
   <file>src</file>
 
   <exclude-pattern>vendor/*</exclude-pattern>
   <exclude-pattern>node_modules/*</exclude-pattern>
 
-  <!-- Use PSR-12 as the base standard -->
+  <!-- Use PSR12 as the base standard -->
   <rule ref="PSR12">
-    <!-- Allow exit() in CLI applications -->
-    <exclude name="WordPress.Security.EscapeOutput.OutputNotEscaped"/>
-    <exclude name="WordPress.Security.ValidatedSanitizedInput.InputNotValidated"/>
-    <exclude name="Generic.PHP.ForbiddenFunctions"/>
+    <!-- Exclude the sniff that enforces camelCase for method names -->
+    <exclude name="PSR1.Methods.CamelCapsMethodName"/>
   </rule>
 
-  <!-- Allow exit() for CLI applications -->
+  <!-- Allow exit() and related functions for CLI applications -->
   <rule ref="Generic.PHP.ForbiddenFunctions">
     <properties>
       <property name="forbiddenFunctions" type="array">
         <element key="die" value="null"/>
         <element key="eval" value="null"/>
-        <!-- Remove exit from forbidden functions -->
+        <!-- Remove exit from forbidden functions as it's common in CLIs -->
       </property>
     </properties>
+  </rule>
+
+  <!-- Allow direct output in CLI applications -->
+  <rule ref="WordPress.Security.EscapeOutput">
+    <severity>0</severity>
+  </rule>
+  <rule ref="WordPress.Security.ValidatedSanitizedInput">
+    <severity>0</severity>
+  </rule>
+
+  <!-- Enforce 4 spaces for indentation -->
+  <arg name="tab-width" value="4"/>
+  <rule ref="Generic.WhiteSpace.ScopeIndent">
+      <properties>
+          <property name="indent" value="4"/>
+          <property name="tabIndent" value="false"/>
+      </properties>
   </rule>
 
 </ruleset>

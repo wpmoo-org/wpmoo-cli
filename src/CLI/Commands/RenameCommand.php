@@ -52,7 +52,7 @@ class RenameCommand extends BaseCommand
         }
 
         $old_dir = dirname($project_info['main_file']);
-        $old_project_config = $this->getProjectConfig($old_dir);
+        $old_project_config = $this->get_project_config($old_dir);
         $old_plugin_file_headers = $this->get_plugin_file_headers($project_info['main_file']);
 
         // Merge config with actual file headers, prioritizing config if set.
@@ -63,75 +63,90 @@ class RenameCommand extends BaseCommand
         }
 
         $symfony_io->section('Current Project Info');
-        $symfony_io->listing([
-            "Plugin Name:   " . ($current_project_info['name'] ?: '<not set>'),
-            "Namespace:     " . ($current_project_info['namespace'] ?: '<not set>'),
-            "Text Domain:   " . ($current_project_info['text_domain'] ?: '<not set>'),
-        ]);
+        $symfony_io->listing(
+            [
+                'Plugin Name:   ' . ( $current_project_info['name'] ?: '<not set>' ),
+                'Namespace:     ' . ( $current_project_info['namespace'] ?: '<not set>' ),
+                'Text Domain:   ' . ( $current_project_info['text_domain'] ?: '<not set>' ),
+            ]
+        );
 
         $symfony_io->warning('The new plugin name and namespace can not contain "WPMoo"');
 
-
         // 2. Ask for new names.
-        $new_name = $symfony_io->ask('Plugin name', null, function ($answer) {
-            if (empty($answer)) {
-                throw new \RuntimeException('Plugin name cannot be empty.');
+        $new_name = $symfony_io->ask(
+            'Plugin name',
+            null,
+            function ($answer) {
+                if (empty($answer)) {
+                    throw new \RuntimeException('Plugin name cannot be empty.');
+                }
+                if (stripos($answer, 'WPMoo') !== false) {
+                    throw new \RuntimeException('Plugin name cannot contain "WPMoo".');
+                }
+                return $answer;
             }
-            if (stripos($answer, 'WPMoo') !== false) {
-                throw new \RuntimeException('Plugin name cannot contain "WPMoo".');
-            }
-            return $answer;
-        });
+        );
 
         // Namespace.
         $recommended_namespace = str_replace(' ', '', ucwords($new_name));
-        $new_namespace = $symfony_io->ask('Namespace', $recommended_namespace, function ($answer) {
-            if (empty($answer)) {
-                throw new \RuntimeException('Namespace cannot be empty.');
-            }
-            if (stripos($answer, 'WPMoo') !== false) {
-                throw new \RuntimeException('Namespace cannot contain "WPMoo".');
-            }
-
-            // Allow namespaces with backslashes (sub-namespaces).
-            // Each part should be a valid PHP identifier.
-            $parts = explode('\\', $answer);
-            foreach ($parts as $part) {
-                if ($part !== '' && !preg_match('/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/', $part)) {
-                    throw new \RuntimeException('Namespace is not valid: "' . $part . '" is not a valid PHP identifier.');
+        $new_namespace = $symfony_io->ask(
+            'Namespace',
+            $recommended_namespace,
+            function ($answer) {
+                if (empty($answer)) {
+                    throw new \RuntimeException('Namespace cannot be empty.');
+                }
+                if (stripos($answer, 'WPMoo') !== false) {
+                    throw new \RuntimeException('Namespace cannot contain "WPMoo".');
                 }
 
-                // Additional validation for WordPress/WPMoo conventions.
-                // Namespace parts should follow PascalCase (uppercase first letter, no underscores in middle).
-                if ($part !== '' && !preg_match('/^[A-Z][a-zA-Z0-9]*$/', $part)) {
-                    throw new \RuntimeException('Namespace part "' . $part . '" should follow PascalCase convention (start with uppercase letter, only letters and numbers allowed).');
+                // Allow namespaces with backslashes (sub-namespaces).
+                // Each part should be a valid PHP identifier.
+                $parts = explode('\\', $answer);
+                foreach ($parts as $part) {
+                    if ($part !== '' && ! preg_match('/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/', $part)) {
+                        throw new \RuntimeException('Namespace is not valid: "' . $part . '" is not a valid PHP identifier.');
+                    }
+
+                    // Additional validation for WordPress/WPMoo conventions.
+                    // Namespace parts should follow PascalCase (uppercase first letter, no underscores in middle).
+                    if ($part !== '' && ! preg_match('/^[A-Z][a-zA-Z0-9]*$/', $part)) {
+                        throw new \RuntimeException('Namespace part "' . $part . '" should follow PascalCase convention (start with uppercase letter, only letters and numbers allowed).');
+                    }
                 }
+                return $answer;
             }
-            return $answer;
-        });
+        );
 
         // Text Domain.
         $recommended_text_domain = $this->slugify($new_name);
-        $new_text_domain = $symfony_io->ask('Text Domain', $recommended_text_domain, function ($answer) {
-            if (empty($answer)) {
-                throw new \RuntimeException('Text Domain cannot be empty.');
+        $new_text_domain = $symfony_io->ask(
+            'Text Domain',
+            $recommended_text_domain,
+            function ($answer) {
+                if (empty($answer)) {
+                    throw new \RuntimeException('Text Domain cannot be empty.');
+                }
+                if (! preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $answer)) {
+                    throw new \RuntimeException('Text Domain is not valid (must be lowercase, hyphen-separated).');
+                }
+                return $answer;
             }
-            if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $answer)) {
-                throw new \RuntimeException('Text Domain is not valid (must be lowercase, hyphen-separated).');
-            }
-            return $answer;
-        });
+        );
 
         // 3. Generate new filename and show confirmation.
         $new_filename = $this->slugify($new_name) . '.php';
 
         $symfony_io->section('Summary of Changes');
-        $symfony_io->listing([
-            "New plugin filename: <info>{$new_filename}</info>",
-            "New plugin name:     <info>{$new_name}</info>",
-            "New namespace:         <info>{$new_namespace}</info>",
-            "New text domain:       <info>{$new_text_domain}</info>",
-        ]);
+        $symfony_io->listing(
+            [
+                "New plugin filename: <info>{$new_filename}</info>",
+                "New plugin name:     <info>{$new_name}</info>",
+                "New namespace:         <info>{$new_namespace}</info>",
+                "New text domain:       <info>{$new_text_domain}</info>",
+            ]
+        );
 
         if ('yes' !== $symfony_io->ask('Continue with renaming? (yes/no)', 'no')) {
             $symfony_io->note('Operation cancelled.');
@@ -158,61 +173,61 @@ class RenameCommand extends BaseCommand
     /**
      * Renames the plugin.
      *
-     * @param array $projectInfo
-     * @param string $newName
-     * @param string $newNamespace
-     * @param string $newTextDomain
-     * @param string $newFilename
+     * @param array $project_info
+     * @param string $new_name
+     * @param string $new_namespace
+     * @param string $new_text_domain
+     * @param string $new_filename
      * @param OutputInterface $output
      */
     private function rename_plugin(
-        array $projectInfo,
-        string $newName,
-        string $newNamespace,
-        string $newTextDomain,
-        string $newFilename,
+        array $project_info,
+        string $new_name,
+        string $new_namespace,
+        string $new_text_domain,
+        string $new_filename,
         SymfonyStyle $io
     ) {
-        $oldMainFile = $projectInfo['main_file'];
-        $oldDir = dirname($oldMainFile);
-        $newMainFile = $oldDir . '/' . $newFilename;
+        $old_main_file = $project_info['main_file'];
+        $old_dir = dirname($old_main_file);
+        $newMainFile = $old_dir . '/' . $new_filename;
 
         // Get old project config.
         $old_project_config = $this->get_project_config($old_dir);
-        $oldPluginFileHeaders = $this->getPluginFileHeaders($oldMainFile);
+        $old_plugin_file_headers = $this->get_plugin_file_headers($old_main_file);
 
         // Merge config with actual file headers, prioritizing config if set.
-        $currentProjectInfo = array_merge($oldPluginFileHeaders, $oldProjectConfig);
+        $current_project_info = array_merge($old_plugin_file_headers, $old_project_config);
 
-        $oldName = $currentProjectInfo['name'] ?? '';
-        $oldNamespace = $currentProjectInfo['namespace'] ?? '';
-        $oldTextDomain = $currentProjectInfo['text_domain'] ?? '';
+        $old_name = $current_project_info['name'] ?? '';
+        $old_namespace = $current_project_info['namespace'] ?? '';
+        $old_text_domain = $current_project_info['text_domain'] ?? '';
 
-        if (empty($oldNamespace)) {
+        if (empty($old_namespace)) {
             $io->error('Could not determine the old namespace from wpmoo-config.yml or composer.json. Aborting.');
             return;
         }
         // If oldTextDomain is not found in config, try to get it from the main plugin file header.
-        if (empty($oldTextDomain)) {
+        if (empty($old_text_domain)) {
             $old_text_domain = $this->get_old_text_domain($old_main_file);
-            if (empty($oldTextDomain)) {
+            if (empty($old_text_domain)) {
                 $io->error('Could not determine the old text domain from wpmoo-config.yml or plugin header. Aborting.');
                 return;
             }
         }
 
         // Rename main plugin file.
-        if (file_exists($oldMainFile)) {
-            rename($oldMainFile, $newMainFile);
-            $io->writeln("✓ Renamed '{$oldMainFile}' to '{$newMainFile}'");
+        if (file_exists($old_main_file)) {
+            rename($old_main_file, $newMainFile);
+            $io->writeln("✓ Renamed '{$old_main_file}' to '{$newMainFile}'");
         } else {
-            $io->error("Main plugin file '{$oldMainFile}' not found. Cannot rename.");
+            $io->error("Main plugin file '{$old_main_file}' not found. Cannot rename.");
             return;
         }
 
         // Update plugin name and text domain headers in main file.
         $this->update_plugin_file_headers(
-            $new_main_file,
+            $newMainFile,
             $old_name,
             $new_name,
             $old_text_domain,
@@ -244,18 +259,18 @@ class RenameCommand extends BaseCommand
 
         // Store new project config.
         $this->save_project_config(
-            $oldDir,
-            $newName,
-            $newNamespace,
-            $newTextDomain
+            $old_dir,
+            $new_name,
+            $new_namespace,
+            $new_text_domain
         );
-        $io->writeln("✓ Saved new project config to wpmoo-config.yml");
+        $io->writeln('✓ Saved new project config to wpmoo-config.yml');
 
         // Run composer dump-autoload to refresh the autoloader with new namespace.
-        $this->runComposerDumpAutoload($oldDir, $io);
+        $this->run_composer_dump_autoload($old_dir, $io);
 
         // Inform the user about plugin reactivation if file was renamed.
-        $this->inform_about_plugin_reactivation($io, $old_main_file, $new_main_file);
+        $this->inform_about_plugin_reactivation($io, $old_main_file, $newMainFile);
     }
 
     /**
@@ -268,41 +283,41 @@ class RenameCommand extends BaseCommand
     {
         // Check if composer.json exists in the project directory.
         $composerJsonPath = $dir . '/composer.json';
-        if (!file_exists($composerJsonPath)) {
-            $io->note("No composer.json found, skipping autoload dump.");
+        if (! file_exists($composerJsonPath)) {
+            $io->note('No composer.json found, skipping autoload dump.');
             return;
         }
 
-        $io->writeln("<success>Running composer dump-autoload...</success>");
+        $io->writeln('<success>Running composer dump-autoload...</success>');
 
         // Check if composer is available.
-        $resultCode = 0;
-        $outputLines = [];
+        $result_code = 0;
+        $output_lines = [];
 
         // Using @ to suppress errors in case composer is not found.
-        $hasComposer = !empty(trim(shell_exec('command -v composer')));
+        $hasComposer = ! empty(trim(shell_exec('command -v composer')));
         if ($hasComposer) {
             // Run composer dump-autoload in the project directory.
             $command = 'cd ' . escapeshellarg($dir) . ' && composer dump-autoload';
-            exec($command, $outputLines, $resultCode);
+            exec($command, $output_lines, $result_code);
         } else {
             // Check if composer.phar exists in the project directory.
             $composerPharPath = $dir . '/composer.phar';
             if (file_exists($composerPharPath)) {
                 $command = 'cd ' . escapeshellarg($dir) . ' && php composer.phar dump-autoload';
-                exec($command, $outputLines, $resultCode);
+                exec($command, $output_lines, $result_code);
             } else {
                 $io->error('Composer not found and no composer.phar in project directory. Please run composer dump-autoload manually.');
                 return;
             }
         }
 
-        if ($resultCode === 0) {
+        if ($result_code === 0) {
             $io->writeln('<success>Successfully updated autoloader.</success>');
         } else {
             $io->error('Failed to run composer dump-autoload. Please run it manually.');
-            if (!empty($outputLines)) {
-                $io->listing($outputLines);
+            if (! empty($output_lines)) {
+                $io->listing($output_lines);
             }
         }
     }
@@ -311,25 +326,27 @@ class RenameCommand extends BaseCommand
      * Informs the user about plugin reactivation and directory renaming after renaming.
      *
      * @param SymfonyStyle $io The output interface.
-     * @param string $oldMainFile The old main plugin file path.
+     * @param string $old_main_file The old main plugin file path.
      * @param string $newMainFile The new main plugin file path.
      */
     private function inform_about_plugin_reactivation(SymfonyStyle $io, string $old_main_file, string $new_main_file): void
     {
         // Check if the main plugin file was actually renamed.
-        $oldFilename = basename($oldMainFile);
-        $newFilename = basename($newMainFile);
+        $old_filename = basename($old_main_file);
+        $new_filename = basename($new_main_file);
 
-        if ($oldFilename !== $newFilename) {
-            $io->title("IMPORTANT NOTES ABOUT RENAME:");
-            $io->listing([
-                "Plugin file has been renamed from '{$oldFilename}' to '{$newFilename}'.",
-                "If the plugin was active in WordPress, it may now show a fatal error.",
-                "WordPress caches plugin paths, so you must deactivate and reactivate the plugin in WordPress admin to update its internal references.",
-                "If activation fails after reactivation, you may need to manually update the wp_options table ('active_plugins' option) and wp_plugin_paths cache.",
-                "If you want the directory name to match the new plugin name, you should manually rename the plugin directory and update any references (e.g., in git, symlinks, etc.).",
-                "Remember to update any deployment configurations if the directory name changes.",
-            ]);
+        if ($old_filename !== $new_filename) {
+            $io->title('IMPORTANT NOTES ABOUT RENAME:');
+            $io->listing(
+                [
+                    "Plugin file has been renamed from '{$old_filename}' to '{$new_filename}'.",
+                    'If the plugin was active in WordPress, it may now show a fatal error.',
+                    'WordPress caches plugin paths, so you must deactivate and reactivate the plugin in WordPress admin to update its internal references.',
+                    "If activation fails after reactivation, you may need to manually update the wp_options table ('active_plugins' option) and wp_plugin_paths cache.",
+                    'If you want the directory name to match the new plugin name, you should manually rename the plugin directory and update any references (e.g., in git, symlinks, etc.).',
+                    'Remember to update any deployment configurations if the directory name changes.',
+                ]
+            );
         }
     }
 
@@ -337,15 +354,15 @@ class RenameCommand extends BaseCommand
      * Saves the new project configuration to wpmoo-config.yml.
      *
      * @param string $dir
-     * @param string $newName
-     * @param string $newNamespace
-     * @param string $newTextDomain
+     * @param string $new_name
+     * @param string $new_namespace
+     * @param string $new_text_domain
      */
     private function save_project_config(
         string $dir,
-        string $newName,
-        string $newNamespace,
-        string $newTextDomain
+        string $new_name,
+        string $new_namespace,
+        string $new_text_domain
     ) {
         $configFile = $dir . '/wpmoo-config.yml';
         $config = [];
@@ -353,9 +370,9 @@ class RenameCommand extends BaseCommand
             $config = Yaml::parseFile($configFile);
         }
 
-        $config['project']['name'] = $newName;
-        $config['project']['namespace'] = $newNamespace;
-        $config['project']['text_domain'] = $newTextDomain;
+        $config['project']['name'] = $new_name;
+        $config['project']['namespace'] = $new_namespace;
+        $config['project']['text_domain'] = $new_text_domain;
 
         file_put_contents($configFile, Yaml::dump($config, 2));
     }
@@ -364,25 +381,25 @@ class RenameCommand extends BaseCommand
      * Updates the plugin name in the main plugin file.
      *
      * @param string $file
-     * @param string $newName
+     * @param string $new_name
      * @param OutputInterface $output
      */
     private function update_plugin_name(string $file, string $new_name, SymfonyStyle $io)
     {
         $content = file_get_contents($file);
-        $newContent = preg_replace('/^(Plugin Name: ).*$/m', '$1' . $newName, $content);
-        file_put_contents($file, $newContent);
-        $io->writeln("✓ Updated Plugin Name to '{$newName}' in '{$file}'");
+        $new_content = preg_replace('/^(Plugin Name: ).*$/m', '$1' . $new_name, $content);
+        file_put_contents($file, $new_content);
+        $io->writeln("✓ Updated Plugin Name to '{$new_name}' in '{$file}'");
     }
 
     /**
      * Updates the Plugin Name and Text Domain headers in the main plugin file.
      *
-     * @param string $mainFile The path to the main plugin file.
-     * @param string $oldPluginName The old plugin name.
-     * @param string $newPluginName The new plugin name.
-     * @param string $oldTextDomain The old text domain.
-     * @param string $newTextDomain The new text domain.
+     * @param string $main_file The path to the main plugin file.
+     * @param string $old_plugin_name The old plugin name.
+     * @param string $new_plugin_name The new plugin name.
+     * @param string $old_text_domain The old text domain.
+     * @param string $new_text_domain The new text domain.
      * @param SymfonyStyle $io The output interface.
      */
     private function update_plugin_file_headers(
@@ -393,59 +410,82 @@ class RenameCommand extends BaseCommand
         string $new_text_domain,
         SymfonyStyle $io
     ) {
-        $content = file_get_contents($mainFile);
-        $originalContent = $content;
+        $content = file_get_contents($main_file);
+        $original_content = $content;
 
         // Update Plugin Name header.
-        if (!empty($oldPluginName) && $oldPluginName !== $newPluginName) {
-            $content = preg_replace_callback('/^(Plugin Name:\s*)' . preg_quote($oldPluginName, '/') . '$/m', function ($matches) use ($newPluginName) {
-                return $matches[1] . $newPluginName;
-            }, $content);
-            $io->writeln("✓ Updated Plugin Name header in '{$mainFile}'");
-        } elseif (empty($oldPluginName) && preg_match('/^(Plugin Name:\s*)(.*)$/m', $content)) {
-            $content = preg_replace_callback('/^(Plugin Name:\s*)(.*)$/m', function ($matches) use ($newPluginName) {
-                return $matches[1] . $newPluginName;
-            }, $content);
-            $io->writeln("✓ Updated Plugin Name header in '{$mainFile}' (from undetermined to '{$newPluginName}')");
+        if (! empty($old_plugin_name) && $old_plugin_name !== $new_plugin_name) {
+            $content = preg_replace_callback(
+                '/^(Plugin Name:\s*)' . preg_quote($old_plugin_name, '/') . '$/m',
+                function ($matches) use ($new_plugin_name) {
+                    return $matches[1] . $new_plugin_name;
+                },
+                $content
+            );
+            $io->writeln("✓ Updated Plugin Name header in '{$main_file}'");
+        } elseif (empty($old_plugin_name) && preg_match('/^(Plugin Name:\s*)(.*)$/m', $content)) {
+            $content = preg_replace_callback(
+                '/^(Plugin Name:\s*)(.*)$/m',
+                function ($matches) use ($new_plugin_name) {
+                    return $matches[1] . $new_plugin_name;
+                },
+                $content
+            );
+            $io->writeln("✓ Updated Plugin Name header in '{$main_file}' (from undetermined to '{$new_plugin_name}')");
         }
 
         // Update Text Domain header - WordPress uses a specific format for plugin headers.
         // Text Domain can appear with various spacing formats in the plugin header.
-        $textDomainPattern = '/^(\s*\*\s*Text Domain:\s*)' . preg_quote($oldTextDomain, '/') . '(\s*)$/m';
-        if (!empty($oldTextDomain) && $oldTextDomain !== $newTextDomain) {
-            $content = preg_replace_callback($textDomainPattern, function ($matches) use ($newTextDomain) {
-                return $matches[1] . $newTextDomain . $matches[2];
-            }, $content);
-            $io->writeln("✓ Updated Text Domain header in '{$mainFile}'");
-        } elseif (empty($oldTextDomain) && preg_match($textDomainPattern, $content)) {
+        $text_domain_pattern = '/^(\s*\*\s*Text Domain:\s*)' . preg_quote($old_text_domain, '/') . '(\s*)$/m';
+        if (! empty($old_text_domain) && $old_text_domain !== $new_text_domain) {
+            $content = preg_replace_callback(
+                $text_domain_pattern,
+                function ($matches) use ($new_text_domain) {
+                    return $matches[1] . $new_text_domain . $matches[2];
+                },
+                $content
+            );
+            $io->writeln("✓ Updated Text Domain header in '{$main_file}'");
+        } elseif (empty($old_text_domain) && preg_match($text_domain_pattern, $content)) {
             // This case shouldn't normally happen since oldTextDomain is fetched from the file, but handling for completeness.
-            $content = preg_replace_callback($textDomainPattern, function ($matches) use ($newTextDomain) {
-                return $matches[1] . $newTextDomain . $matches[2];
-            }, $content);
-            $io->writeln("✓ Updated Text Domain header in '{$mainFile}' (from undetermined to '{$newTextDomain}')");
-        } elseif (!preg_match($textDomainPattern, $content) && !empty($newTextDomain)) {
+            $content = preg_replace_callback(
+                $text_domain_pattern,
+                function ($matches) use ($new_text_domain) {
+                    return $matches[1] . $new_text_domain . $matches[2];
+                },
+                $content
+            );
+            $io->writeln("✓ Updated Text Domain header in '{$main_file}' (from undetermined to '{$new_text_domain}')");
+        } elseif (! preg_match($text_domain_pattern, $content) && ! empty($new_text_domain)) {
             // If no Text Domain header exists, add it after Plugin Name in the header.
-            $pluginNamePattern = '/^(\s*\*\s*Plugin Name:\s*' . preg_quote($oldPluginName, '/') . ')(\s*)$/m';
-            if (preg_match($pluginNamePattern, $content)) {
-                $content = preg_replace_callback($pluginNamePattern, function ($matches) use ($newTextDomain) {
-                    return $matches[1] . $matches[2] . "\n * Text Domain: " . $newTextDomain;
-                }, $content);
-                $io->writeln("✓ Added Text Domain header to '{$mainFile}'");
+            $plugin_name_pattern = '/^(\s*\*\s*Plugin Name:\s*' . preg_quote($old_plugin_name, '/') . ')(\s*)$/m';
+            if (preg_match($plugin_name_pattern, $content)) {
+                $content = preg_replace_callback(
+                    $plugin_name_pattern,
+                    function ($matches) use ($new_text_domain) {
+                        return $matches[1] . $matches[2] . "\n * Text Domain: " . $new_text_domain;
+                    },
+                    $content
+                );
+                $io->writeln("✓ Added Text Domain header to '{$main_file}'");
             } else {
                 // Alternative: try to find the Plugin Name in the new format.
-                $pluginNamePattern = '/^(\s*\*\s*Plugin Name:\s*' . preg_quote($newPluginName, '/') . ')(\s*)$/m';
-                if (preg_match($pluginNamePattern, $content)) {
-                    $content = preg_replace_callback($pluginNamePattern, function ($matches) use ($newTextDomain) {
-                        return $matches[1] . $matches[2] . "\n * Text Domain: " . $newTextDomain;
-                    }, $content);
-                    $io->writeln("✓ Added Text Domain header to '{$mainFile}'");
+                $plugin_name_pattern = '/^(\s*\*\s*Plugin Name:\s*' . preg_quote($new_plugin_name, '/') . ')(\s*)$/m';
+                if (preg_match($plugin_name_pattern, $content)) {
+                    $content = preg_replace_callback(
+                        $plugin_name_pattern,
+                        function ($matches) use ($new_text_domain) {
+                            return $matches[1] . $matches[2] . "\n * Text Domain: " . $new_text_domain;
+                        },
+                        $content
+                    );
+                    $io->writeln("✓ Added Text Domain header to '{$main_file}'");
                 }
             }
         }
 
-
-        if ($content !== $originalContent) {
-            file_put_contents($mainFile, $content);
+        if ($content !== $original_content) {
+            file_put_contents($main_file, $content);
         }
     }
 
@@ -453,8 +493,8 @@ class RenameCommand extends BaseCommand
      * Updates the namespaces in all PHP files.
      *
      * @param string $dir
-     * @param string $oldNamespace
-     * @param string $newNamespace
+     * @param string $old_namespace
+     * @param string $new_namespace
      * @param SymfonyStyle $io
      */
     private function update_namespaces(string $dir, string $old_namespace, string $new_namespace, SymfonyStyle $io)
@@ -468,19 +508,23 @@ class RenameCommand extends BaseCommand
             $path = $file->getRealPath();
             $content = file_get_contents($path);
             // Replace both namespace declarations and fully qualified class names.
-            $newContent = str_replace(
-                [$oldNamespace . '\\', 'namespace ' . $oldNamespace . ';'],
-                [$newNamespace . '\\', 'namespace ' . $newNamespace . ';'],
+            $new_content = str_replace(
+                [ $old_namespace . '\\', 'namespace ' . $old_namespace . ';' ],
+                [ $new_namespace . '\\', 'namespace ' . $new_namespace . ';' ],
                 $content
             );
 
             // Also update namespace in docblocks (like @package WPMooStarter).
-            $newContent = preg_replace_callback('/(@package\s+)' . preg_quote($oldNamespace, '/') . '/', function ($matches) use ($newNamespace) {
-                return $matches[1] . $newNamespace;
-            }, $newContent);
+            $new_content = preg_replace_callback(
+                '/(@package\s+)' . preg_quote($old_namespace, '/') . '/',
+                function ($matches) use ($new_namespace) {
+                    return $matches[1] . $new_namespace;
+                },
+                $new_content
+            );
 
-            if ($content !== $newContent) {
-                file_put_contents($path, $newContent);
+            if ($content !== $new_content) {
+                file_put_contents($path, $new_content);
                 $io->writeln("✓ Updated namespace in '{$path}'");
             }
         }
@@ -490,13 +534,13 @@ class RenameCommand extends BaseCommand
      * Updates the text domains in all PHP files.
      *
      * @param string $dir
-     * @param string $oldTextDomain
-     * @param string $newTextDomain
+     * @param string $old_text_domain
+     * @param string $new_text_domain
      * @param OutputInterface $output
      */
     private function update_text_domains(string $dir, string $old_text_domain, string $new_text_domain, SymfonyStyle $io)
     {
-        if (empty($oldTextDomain) || empty($newTextDomain) || $oldTextDomain === $newTextDomain) {
+        if (empty($old_text_domain) || empty($new_text_domain) || $old_text_domain === $new_text_domain) {
             return;
         }
 
@@ -510,37 +554,53 @@ class RenameCommand extends BaseCommand
             $content = file_get_contents($path);
 
             // Pattern to match text domains in translation functions.
-            $functions = ['__', '_e', '_n', '_x', '_ex', '_nx', '_n_noop', '_nx_noop'];
-            $newContent = $content;
+            $functions = [ '__', '_e', '_n', '_x', '_ex', '_nx', '_n_noop', '_nx_noop' ];
+            $new_content = $content;
 
             foreach ($functions as $func) {
-                $pattern = '/(\b' . preg_quote($func, '/') . '\s*\(\s*["\'][^"\']*["\']\s*,\s*["\'])' . preg_quote($oldTextDomain, '/') . '(["\'])/';
-                $newContent = preg_replace_callback($pattern, function ($matches) use ($newTextDomain) {
-                    return $matches[1] . $newTextDomain . $matches[2];
-                }, $newContent);
+                $pattern = '/(\b' . preg_quote($func, '/') . '\s*\(\s*["\'][^"\']*["\']\s*,\s*["\'])' . preg_quote($old_text_domain, '/') . '(["\'])/';
+                $new_content = preg_replace_callback(
+                    $pattern,
+                    function ($matches) use ($new_text_domain) {
+                        return $matches[1] . $new_text_domain . $matches[2];
+                    },
+                    $new_content
+                );
             }
 
             // Also update load_plugin_textdomain calls.
-            $loadTextDomainPattern = '/(load_plugin_textdomain\s*\(\s*["\'])' . preg_quote($oldTextDomain, '/') . '(["\'])/';
-            $newContent = preg_replace_callback($loadTextDomainPattern, function ($matches) use ($newTextDomain) {
-                return $matches[1] . $newTextDomain . $matches[2];
-            }, $newContent);
+            $load_text_domain_pattern = '/(load_plugin_textdomain\s*\(\s*["\'])' . preg_quote($old_text_domain, '/') . '(["\'])/';
+            $new_content = preg_replace_callback(
+                $load_text_domain_pattern,
+                function ($matches) use ($new_text_domain) {
+                    return $matches[1] . $new_text_domain . $matches[2];
+                },
+                $new_content
+            );
 
             // Also update other function calls that might contain the text domain.
-            $bootPattern = '/(WPMoo\\\WordPress\\\Bootstrap::instance\(\)->boot\(\s*[^,]*\s*,\s*["\'])' . preg_quote($oldTextDomain, '/') . '(["\'])/';
-            $newContent = preg_replace_callback($bootPattern, function ($matches) use ($newTextDomain) {
-                return $matches[1] . $newTextDomain . $matches[2];
-            }, $newContent);
+            $boot_pattern = '/(WPMoo\\\WordPress\\\Bootstrap::instance\(\)->boot\(\s*[^,]*\s*,\s*["\'])' . preg_quote($old_text_domain, '/') . '(["\'])/';
+            $new_content = preg_replace_callback(
+                $boot_pattern,
+                function ($matches) use ($new_text_domain) {
+                    return $matches[1] . $new_text_domain . $matches[2];
+                },
+                $new_content
+            );
 
             // Update any other direct text domain references that might exist in function calls.
-            $genericPattern = '/(\bboot\s*\(\s*[^,]*\s*,\s*["\'])' . preg_quote($oldTextDomain, '/') . '(["\'])/';
-            $newContent = preg_replace_callback($genericPattern, function ($matches) use ($newTextDomain) {
-                return $matches[1] . $newTextDomain . $matches[2];
-            }, $newContent);
+            $generic_pattern = '/(\bboot\s*\(\s*[^,]*\s*,\s*["\'])' . preg_quote($old_text_domain, '/') . '(["\'])/';
+            $new_content = preg_replace_callback(
+                $generic_pattern,
+                function ($matches) use ($new_text_domain) {
+                    return $matches[1] . $new_text_domain . $matches[2];
+                },
+                $new_content
+            );
 
-            if ($content !== $newContent) {
-                file_put_contents($path, $newContent);
-                $io->writeln("✓ Updated text domain in '{$path}' (from '{$oldTextDomain}' to '{$newTextDomain}')");
+            if ($content !== $new_content) {
+                file_put_contents($path, $new_content);
+                $io->writeln("✓ Updated text domain in '{$path}' (from '{$old_text_domain}' to '{$new_text_domain}')");
             }
         }
     }
@@ -549,50 +609,66 @@ class RenameCommand extends BaseCommand
      * Updates general references throughout the codebase.
      *
      * @param string $dir The directory to process.
-     * @param string $oldPluginName The old plugin name.
-     * @param string $newPluginName The new plugin name.
-     * @param string $oldNamespace The old namespace.
-     * @param string $newNamespace The new namespace.
+     * @param string $old_plugin_name The old plugin name.
+     * @param string $new_plugin_name The new plugin name.
+     * @param string $old_namespace The old namespace.
+     * @param string $new_namespace The new namespace.
      * @param SymfonyStyle $io The output interface.
      */
     private function update_general_references(string $dir, string $old_plugin_name, string $new_plugin_name, string $old_namespace, string $new_namespace, SymfonyStyle $io)
     {
-        if (empty($oldPluginName) || empty($newPluginName) || $oldPluginName === $newPluginName) {
+        if (empty($old_plugin_name) || empty($new_plugin_name) || $old_plugin_name === $new_plugin_name) {
             return;
         }
 
         $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
         foreach ($iterator as $file) {
-            if ($file->isDir() || ($file->getExtension() !== 'php' && $file->getExtension() !== 'js' && $file->getExtension() !== 'txt' && $file->getExtension() !== 'html' && $file->getExtension() !== 'css' && $file->getExtension() !== 'md')) {
+            if ($file->isDir() || ( $file->getExtension() !== 'php' && $file->getExtension() !== 'js' && $file->getExtension() !== 'txt' && $file->getExtension() !== 'html' && $file->getExtension() !== 'css' && $file->getExtension() !== 'md' )) {
                 continue;
             }
 
             $path = $file->getRealPath();
             $content = file_get_contents($path);
-            $newContent = $content;
+            $new_content = $content;
 
             // Update @package references (both old plugin name and old namespace).
-            $newContent = preg_replace_callback('/(@package\s+)' . preg_quote($oldNamespace, '/') . '/', function ($matches) use ($newNamespace) {
-                return $matches[1] . $newNamespace;
-            }, $newContent);
-            $newContent = preg_replace_callback('/(@package\s+)' . preg_quote($oldPluginName, '/') . '/', function ($matches) use ($newPluginName) {
-                return $matches[1] . $newPluginName;
-            }, $newContent);
+            $new_content = preg_replace_callback(
+                '/(@package\s+)' . preg_quote($old_namespace, '/') . '/',
+                function ($matches) use ($new_namespace) {
+                    return $matches[1] . $new_namespace;
+                },
+                $new_content
+            );
+            $new_content = preg_replace_callback(
+                '/(@package\s+)' . preg_quote($old_plugin_name, '/') . '/',
+                function ($matches) use ($new_plugin_name) {
+                    return $matches[1] . $new_plugin_name;
+                },
+                $new_content
+            );
 
             // Update @since, @version, etc. references if they contain the old plugin name.
-            $newContent = preg_replace_callback('/(@since\s+.*?)(?<!\w)' . preg_quote($oldPluginName, '/') . '(?!\w)/', function ($matches) use ($newPluginName) {
-                return $matches[1] . $newPluginName;
-            }, $newContent);
-            $newContent = preg_replace_callback('/(@version\s+.*?)(?<!\w)' . preg_quote($oldPluginName, '/') . '(?!\w)/', function ($matches) use ($newPluginName) {
-                return $matches[1] . $newPluginName;
-            }, $newContent);
+            $new_content = preg_replace_callback(
+                '/(@since\s+.*?)(?<!\w)' . preg_quote($old_plugin_name, '/') . '(?!\w)/',
+                function ($matches) use ($new_plugin_name) {
+                    return $matches[1] . $new_plugin_name;
+                },
+                $new_content
+            );
+            $new_content = preg_replace_callback(
+                '/(@version\s+.*?)(?<!\w)' . preg_quote($old_plugin_name, '/') . '(?!\w)/',
+                function ($matches) use ($new_plugin_name) {
+                    return $matches[1] . $new_plugin_name;
+                },
+                $new_content
+            );
 
             // Update any other references to the old plugin name that might appear in comments/docblocks.
-            $pattern = '/(?<!\w)' . preg_quote($oldPluginName, '/') . '(?!\w)/';
-            $newContent = preg_replace($pattern, $newPluginName, $newContent);
+            $pattern = '/(?<!\w)' . preg_quote($old_plugin_name, '/') . '(?!\w)/';
+            $new_content = preg_replace($pattern, $new_plugin_name, $new_content);
 
-            if ($content !== $newContent) {
-                file_put_contents($path, $newContent);
+            if ($content !== $new_content) {
+                file_put_contents($path, $new_content);
                 $io->writeln("✓ Updated general references in '{$path}'");
             }
         }
@@ -602,19 +678,19 @@ class RenameCommand extends BaseCommand
      * Updates the plugin names in all PHP files.
      *
      * @param string $dir The directory to process.
-     * @param string $oldPluginName The old plugin name.
-     * @param string $newPluginName The new plugin name.
+     * @param string $old_plugin_name The old plugin name.
+     * @param string $new_plugin_name The new plugin name.
      * @param SymfonyStyle $io The output interface.
      */
     private function update_plugin_names(string $dir, string $old_plugin_name, string $new_plugin_name, SymfonyStyle $io)
     {
-        if (empty($oldPluginName) || empty($newPluginName) || $oldPluginName === $newPluginName) {
+        if (empty($old_plugin_name) || empty($new_plugin_name) || $old_plugin_name === $new_plugin_name) {
             return;
         }
 
         $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir));
         foreach ($iterator as $file) {
-            if ($file->isDir() || ($file->getExtension() !== 'php' && $file->getExtension() !== 'js' && $file->getExtension() !== 'txt' && $file->getExtension() !== 'html' && $file->getExtension() !== 'css')) {
+            if ($file->isDir() || ( $file->getExtension() !== 'php' && $file->getExtension() !== 'js' && $file->getExtension() !== 'txt' && $file->getExtension() !== 'html' && $file->getExtension() !== 'css' )) {
                 continue;
             }
 
@@ -622,30 +698,38 @@ class RenameCommand extends BaseCommand
             $content = file_get_contents($path);
 
             // Replace old plugin name with new plugin name, preserving case where appropriate.
-            $newContent = $content;
+            $new_content = $content;
 
             // Replace in comments (like package, since, version tags).
-            $newContent = preg_replace_callback('/(@package\s+)' . preg_quote($oldPluginName, '/') . '/', function ($matches) use ($newPluginName) {
-                return $matches[1] . $newPluginName;
-            }, $newContent);
-            $newContent = preg_replace_callback('/(@subpackage\s+)' . preg_quote($oldPluginName, '/') . '/', function ($matches) use ($newPluginName) {
-                return $matches[1] . $newPluginName;
-            }, $newContent);
+            $new_content = preg_replace_callback(
+                '/(@package\s+)' . preg_quote($old_plugin_name, '/') . '/',
+                function ($matches) use ($new_plugin_name) {
+                    return $matches[1] . $new_plugin_name;
+                },
+                $new_content
+            );
+            $new_content = preg_replace_callback(
+                '/(@subpackage\s+)' . preg_quote($old_plugin_name, '/') . '/',
+                function ($matches) use ($new_plugin_name) {
+                    return $matches[1] . $new_plugin_name;
+                },
+                $new_content
+            );
 
             // For PHP files, we need to be careful about translation strings.
             if ($file->getExtension() === 'php') {
                 // To protect translation strings, we'll only do simple replacement for now.
                 // A fully robust solution would require a PHP parser, which is overkill.
                 // For now, accept that some translation strings might be changed, but prioritize updating all other plugin name references.
-                $newContent = str_replace($oldPluginName, $newPluginName, $newContent);
+                $new_content = str_replace($old_plugin_name, $new_plugin_name, $new_content);
             } else {
                 // For non-PHP files, just do a simple replacement.
-                $newContent = str_replace($oldPluginName, $newPluginName, $newContent);
+                $new_content = str_replace($old_plugin_name, $new_plugin_name, $new_content);
             }
 
-            if ($content !== $newContent) {
-                file_put_contents($path, $newContent);
-                $io->writeln("✓ Updated plugin name in '{$path}' (from '{$oldPluginName}' to '{$newPluginName}')");
+            if ($content !== $new_content) {
+                file_put_contents($path, $new_content);
+                $io->writeln("✓ Updated plugin name in '{$path}' (from '{$old_plugin_name}' to '{$new_plugin_name}')");
             }
         }
     }
@@ -654,63 +738,75 @@ class RenameCommand extends BaseCommand
      * Updates the readme.txt file.
      *
      * @param string $readmeFilePath The path to the readme.txt file.
-     * @param string $oldPluginName The old plugin name.
-     * @param string $newPluginName The new plugin name.
-     * @param string $oldTextDomain The old text domain.
-     * @param string $newTextDomain The new text domain.
+     * @param string $old_plugin_name The old plugin name.
+     * @param string $new_plugin_name The new plugin name.
+     * @param string $old_text_domain The old text domain.
+     * @param string $new_text_domain The new text domain.
      * @param OutputInterface $output The output interface.
      */
     private function update_readme_file(string $readme_file_path, string $old_plugin_name, string $new_plugin_name, string $old_text_domain, string $new_text_domain, SymfonyStyle $io)
     {
-        if (!file_exists($readmeFilePath)) {
+        if (! file_exists($readme_file_path)) {
             return;
         }
 
-        $content = file_get_contents($readmeFilePath);
-        $originalContent = $content;
+        $content = file_get_contents($readme_file_path);
+        $original_content = $content;
 
         // Update Plugin Name.
-        if (!empty($oldPluginName) && $oldPluginName !== $newPluginName) {
-            $content = preg_replace_callback('/(=== )' . preg_quote($oldPluginName, '/') . '( ===)/', function ($matches) use ($newPluginName) {
-                return $matches[1] . $newPluginName . $matches[2];
-            }, $content);
-            $content = preg_replace_callback('/(== )' . preg_quote($oldPluginName, '/') . '( ==)/', function ($matches) use ($newPluginName) {
-                return $matches[1] . $newPluginName . $matches[2];
-            }, $content);
+        if (! empty($old_plugin_name) && $old_plugin_name !== $new_plugin_name) {
+            $content = preg_replace_callback(
+                '/(=== )' . preg_quote($old_plugin_name, '/') . '( ===)/',
+                function ($matches) use ($new_plugin_name) {
+                    return $matches[1] . $new_plugin_name . $matches[2];
+                },
+                $content
+            );
+            $content = preg_replace_callback(
+                '/(== )' . preg_quote($old_plugin_name, '/') . '( ==)/',
+                function ($matches) use ($new_plugin_name) {
+                    return $matches[1] . $new_plugin_name . $matches[2];
+                },
+                $content
+            );
         }
 
         // Update Stable tag.
-        if (!empty($oldTextDomain) && $oldTextDomain !== $newTextDomain) {
-            $content = preg_replace_callback('/(Stable tag:\s*)' . preg_quote($oldTextDomain, '/') . '/', function ($matches) use ($newTextDomain) {
-                return $matches[1] . $newTextDomain;
-            }, $content);
+        if (! empty($old_text_domain) && $old_text_domain !== $new_text_domain) {
+            $content = preg_replace_callback(
+                '/(Stable tag:\s*)' . preg_quote($old_text_domain, '/') . '/',
+                function ($matches) use ($new_text_domain) {
+                    return $matches[1] . $new_text_domain;
+                },
+                $content
+            );
         }
 
         // General replacement for old plugin name to new plugin name.
-        if (!empty($oldPluginName) && $oldPluginName !== $newPluginName) {
-            $content = str_replace($oldPluginName, $newPluginName, $content);
+        if (! empty($old_plugin_name) && $old_plugin_name !== $new_plugin_name) {
+            $content = str_replace($old_plugin_name, $new_plugin_name, $content);
         }
 
         // General replacement for old text domain to new text domain.
-        if (!empty($oldTextDomain) && $oldTextDomain !== $newTextDomain) {
-            $content = str_replace($oldTextDomain, $newTextDomain, $content);
+        if (! empty($old_text_domain) && $old_text_domain !== $new_text_domain) {
+            $content = str_replace($old_text_domain, $new_text_domain, $content);
         }
 
-        if ($content !== $originalContent) {
-            file_put_contents($readmeFilePath, $content);
-            $io->writeln("✓ Updated readme.txt");
+        if ($content !== $original_content) {
+            file_put_contents($readme_file_path, $content);
+            $io->writeln('✓ Updated readme.txt');
         }
     }
 
     /**
      * Extracts the old text domain from the main plugin file.
      *
-     * @param string $mainFile
+     * @param string $main_file
      * @return string|null
      */
     private function get_old_text_domain(string $main_file): ?string
     {
-        $content = file_get_contents($mainFile);
+        $content = file_get_contents($main_file);
         if (preg_match('/^[ \t\/*#@]*Text Domain:\s*(.*)$/im', $content, $matches)) {
             return trim($matches[1]);
         }
@@ -727,17 +823,17 @@ class RenameCommand extends BaseCommand
     /**
      * Extracts all relevant plugin header information from the main plugin file.
      *
-     * @param string $mainFile The path to the main plugin file.
+     * @param string $main_file The path to the main plugin file.
      * @return array An associative array of header fields.
      */
     private function get_plugin_file_headers(string $main_file): array
     {
-        if (!file_exists($mainFile)) {
+        if (! file_exists($main_file)) {
             return [];
         }
 
         $headers = [];
-        $content = file_get_contents($mainFile);
+        $content = file_get_contents($main_file);
 
         $header_keys = [
             'name'        => 'Plugin Name',
@@ -750,9 +846,9 @@ class RenameCommand extends BaseCommand
 
         foreach ($header_keys as $key => $value) {
             if (preg_match('/^[ \t\/*#@]*' . preg_quote($value, '/') . ':\s*(.*)$/im', $content, $matches)) {
-                $headers[$key] = trim($matches[1]);
+                $headers[ $key ] = trim($matches[1]);
             } else {
-                $headers[$key] = ''; // Ensure all keys are present.
+                $headers[ $key ] = ''; // Ensure all keys are present.
             }
         }
 
@@ -791,32 +887,35 @@ class RenameCommand extends BaseCommand
             $config = Yaml::parseFile($configFile);
             if (isset($config['project'])) {
                 // Ensure all expected keys are present, even if empty.
-                return array_merge([
-                    'name' => '',
-                    'namespace' => '',
-                    'text_domain' => '',
-                    'author' => '',
-                    'description' => '',
-                    'license' => '',
-                    'license_uri' => '',
-                ], $config['project']);
+                return array_merge(
+                    [
+                        'name' => '',
+                        'namespace' => '',
+                        'text_domain' => '',
+                        'author' => '',
+                        'description' => '',
+                        'license' => '',
+                        'license_uri' => '',
+                    ],
+                    $config['project']
+                );
             }
         }
 
-        $composerFile = $dir . '/composer.json';
-        if (file_exists($composerFile)) {
-            $composerData = json_decode(file_get_contents($composerFile), true);
-            if (isset($composerData['autoload']['psr-4'])) {
-                $namespaces = $composerData['autoload']['psr-4'];
+        $composer_file = $dir . '/composer.json';
+        if (file_exists($composer_file)) {
+            $composer_data = json_decode(file_get_contents($composer_file), true);
+            if (isset($composer_data['autoload']['psr-4'])) {
+                $namespaces = $composer_data['autoload']['psr-4'];
                 $namespace = rtrim(key($namespaces), '\\');
-                $name = key($composerData['autoload']['psr-4']); // Assuming the namespace key is the project name.
+                $name = key($composer_data['autoload']['psr-4']); // Assuming the namespace key is the project name.
                 $name = rtrim($name, '\\');
-                $textDomain = $this->slugify($name);
+                $text_domain = $this->slugify($name);
 
                 return [
                     'name' => $name,
                     'namespace' => $namespace,
-                    'text_domain' => $textDomain,
+                    'text_domain' => $text_domain,
                     'author' => '',
                     'description' => '',
                     'license' => '',
@@ -841,40 +940,40 @@ class RenameCommand extends BaseCommand
      *
      * @return array
      */
-    protected function identifyProject(): array
+    protected function identify_project(): array
     {
-        $cwd = $this->getCwd();
+        $cwd = $this->get_cwd();
 
         // Check for wpmoo framework project.
-        $wpmooSrcPath = $cwd . '/src/wpmoo.php';
-        $isWPMooFramework = file_exists($wpmooSrcPath) &&
-            strpos(file_get_contents($wpmooSrcPath), 'WPMoo Framework') !== false;
+        $wpmoo_src_path = $cwd . '/src/wpmoo.php';
+        $isWPMooFramework = file_exists($wpmoo_src_path) &&
+            strpos(file_get_contents($wpmoo_src_path), 'WPMoo Framework') !== false;
 
         if ($isWPMooFramework) {
             return [
                 'found' => true,
                 'type' => 'wpmoo-framework',
-                'main_file' => $wpmooSrcPath,
-                'readme_file' => $cwd . '/readme.txt' // Check if readme.txt exists.
+                'main_file' => $wpmoo_src_path,
+                'readme_file' => $cwd . '/readme.txt', // Check if readme.txt exists.
             ];
         }
 
         // Check for wpmoo-starter or other wpmoo-based plugin.
-        $phpFiles = glob($cwd . '/*.php');
-        foreach ($phpFiles as $file) {
+        $php_files = glob($cwd . '/*.php');
+        foreach ($php_files as $file) {
             $content = file_get_contents($file);
             // Look for WPMoo in plugin header.
             if (
                 preg_match('/(wpmoo|WPMoo)/i', $content) &&
-                (preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
-                 preg_match('/^[ \t\/*#@]*Theme Name:/im', $content))
+                ( preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
+                preg_match('/^[ \t\/*#@]*Theme Name:/im', $content) )
             ) {
-                $readmePath = $cwd . '/readme.txt';
+                $readme_path = $cwd . '/readme.txt';
                 return [
                     'found' => true,
                     'type' => 'wpmoo-plugin',
                     'main_file' => $file,
-                    'readme_file' => file_exists($readmePath) ? $readmePath : null
+                    'readme_file' => file_exists($readme_path) ? $readme_path : null,
                 ];
             }
         }
@@ -883,7 +982,7 @@ class RenameCommand extends BaseCommand
             'found' => false,
             'type' => 'unknown',
             'main_file' => null,
-            'readme_file' => null
+            'readme_file' => null,
         ];
     }
 }

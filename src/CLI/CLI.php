@@ -1,5 +1,9 @@
 <?php
 
+namespace WPMoo\CLI;
+
+use WPMoo\CLI\CLIApplication;
+
 /**
  * WPMoo CLI bootstrap.
  *
@@ -11,12 +15,6 @@
  * @link  https://github.com/wpmoo/wpmoo GitHub Repository.
  * @license https://spdx.org/licenses/GPL-2.0-or-later.html GPL-2.0-or-later
  */
-
-namespace WPMoo\CLI;
-
-use WPMoo\CLI\CLIApplication;
-
-
 class CLI
 {
     /**
