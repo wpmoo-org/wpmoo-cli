@@ -60,18 +60,18 @@ class DeployCommand extends BaseCommand
 
         $output->writeln('<info>Preparing for deployment...</info>');
 
-        $version_manager = new VersionManager($this);
+        $versionManager = new VersionManager($this);
 
         // 1. Get new version.
-        $current_version = $version_manager->get_current_version($project);
+        $current_version = $versionManager->get_current_version($project);
         $output->writeln("<comment>Current version: {$current_version}</comment>");
-        $new_version = $version_manager->interactive_version_selection($input, $output, $current_version);
+        $new_version = $versionManager->interactive_version_selection($input, $output, $current_version);
 
         if (empty($new_version)) {
             $output->writeln('<comment>Operation cancelled.</comment>');
             return self::SUCCESS;
         }
-        if (! $version_manager->is_valid_version($new_version)) {
+        if (! $versionManager->is_valid_version($new_version)) {
             $output->writeln("<error>Invalid version format: {$new_version}</error>");
             return self::FAILURE;
         }
@@ -89,8 +89,8 @@ class DeployCommand extends BaseCommand
 
         // 3. Generate POT file.
         $output->writeln('> Generating .pot file...');
-        $pot_generator = new PotGenerator();
-        $pot_generator->generate(
+        $potGenerator = new PotGenerator();
+        $potGenerator->generate_pot_file(
             $this->get_cwd() . '/src',
             $this->get_cwd() . '/languages/wpmoo.pot',
             [ 'samples', 'vendor', 'node_modules' ]
@@ -103,7 +103,7 @@ class DeployCommand extends BaseCommand
 
         // 5. Update version numbers.
         $output->writeln("> Bumping version to {$new_version}...");
-        $version_manager->updateVersion($project, $new_version, $output);
+        $versionManager->update_version($project, $new_version, $output);
 
         // 6. Commit all changes.
         $output->writeln('> Committing all changes...');
@@ -120,11 +120,11 @@ class DeployCommand extends BaseCommand
         $this->run_shell_command_wrapper('git archive HEAD | tar -x -C ' . escapeshellarg($build_path), $output, true);
 
         // After git archive, copy built assets if they exist (e.g. from build processes)
-        $src_assets_path = $this->get_cwd() . '/src/assets';
-        $dist_src_assets_path = $build_path . '/src/assets';
-        if (is_dir($src_assets_path)) {
-            $this->run_process([ 'mkdir', '-p', dirname($dist_src_assets_path) ], $output);
-            $this->run_process([ 'cp', '-r', $src_assets_path, dirname($dist_src_assets_path) . '/' ], $output);
+        $srcAssetsPath = $this->get_cwd() . '/src/assets';
+        $distSrcAssetsPath = $build_path . '/src/assets';
+        if (is_dir($srcAssetsPath)) {
+            $this->run_process([ 'mkdir', '-p', dirname($distSrcAssetsPath) ], $output);
+            $this->run_process([ 'cp', '-r', $srcAssetsPath, dirname($distSrcAssetsPath) . '/' ], $output);
         }
 
         // For WPMoo-based plugins, include the WPMoo framework separately to avoid dependency conflicts
@@ -132,44 +132,44 @@ class DeployCommand extends BaseCommand
             $output->writeln('> Including WPMoo framework separately for WPMoo-based plugin...');
 
             // Create the wpmoo-core directory in the build
-            $wpmoo_core_path = $build_path . '/wpmoo-core';
-            $this->run_process([ 'mkdir', '-p', $wpmoo_core_path ], $output);
+            $wpmooCorePath = $build_path . '/wpmoo-core';
+            $this->run_process([ 'mkdir', '-p', $wpmooCorePath ], $output);
 
             // Copy the WPMoo framework to the separate directory
-            $source_wpmoo_path = $this->get_cwd() . '/vendor/wpmoo/wpmoo';
-            if (is_dir($source_wpmoo_path)) {
+            $sourceWpMooPath = $this->get_cwd() . '/vendor/wpmoo/wpmoo';
+            if (is_dir($sourceWpMooPath)) {
                 // Copy only the src and necessary files from the WPMoo framework
-                $srcPath = $source_wpmoo_path . '/src';
+                $srcPath = $sourceWpMooPath . '/src';
                 if (is_dir($srcPath)) {
-                    $this->run_process([ 'cp', '-r', $srcPath, $wpmoo_core_path . '/' ], $output);
+                    $this->run_process([ 'cp', '-r', $srcPath, $wpmooCorePath . '/' ], $output);
                 }
 
-                $license_path = $source_wpmoo_path . '/LICENSE';
-                if (file_exists($license_path)) {
-                    $this->run_process([ 'cp', $license_path, $wpmoo_core_path . '/' ], $output);
+                $licensePath = $sourceWpMooPath . '/LICENSE';
+                if (file_exists($licensePath)) {
+                    $this->run_process([ 'cp', $licensePath, $wpmooCorePath . '/' ], $output);
                 }
 
-                $mainFrameworkFile = $source_wpmoo_path . '/wpmoo.php';
+                $mainFrameworkFile = $sourceWpMooPath . '/wpmoo.php';
                 if (file_exists($mainFrameworkFile)) {
-                    $this->run_process([ 'cp', $mainFrameworkFile, $wpmoo_core_path . '/' ], $output);
+                    $this->run_process([ 'cp', $mainFrameworkFile, $wpmooCorePath . '/' ], $output);
                 }
             }
 
             // For the plugin itself, we only need its own autoloader dependencies (not framework ones)
             // We'll create a minimal vendor directory with only truly necessary dependencies
-            $vendor_path = $build_path . '/vendor';
-            $this->run_process([ 'mkdir', '-p', $vendor_path ], $output);
+            $vendorPath = $build_path . '/vendor';
+            $this->run_process([ 'mkdir', '-p', $vendorPath ], $output);
 
             // Copy only the autoloader files that the plugin itself needs
-            $source_autoload_path = $this->get_cwd() . '/vendor/autoload.php';
-            if (file_exists($source_autoload_path)) {
-                $this->run_process([ 'cp', $source_autoload_path, $vendor_path . '/' ], $output);
+            $sourceAutoloadPath = $this->get_cwd() . '/vendor/autoload.php';
+            if (file_exists($sourceAutoloadPath)) {
+                $this->run_process([ 'cp', $sourceAutoloadPath, $vendorPath . '/' ], $output);
             }
 
             // Copy the composer directory with autoloader files
-            $source_composer_path = $this->get_cwd() . '/vendor/composer';
-            if (is_dir($source_composer_path)) {
-                $this->run_process([ 'cp', '-r', $source_composer_path, $vendor_path . '/' ], $output);
+            $sourceComposerPath = $this->get_cwd() . '/vendor/composer';
+            if (is_dir($sourceComposerPath)) {
+                $this->run_process([ 'cp', '-r', $sourceComposerPath, $vendorPath . '/' ], $output);
             }
         }
 
@@ -190,8 +190,8 @@ class DeployCommand extends BaseCommand
                 $output->writeln('<comment>DRY RUN: Skipping SVN trunk commit.</comment>');
                 $this->run_process([ 'svn', 'status' ], $output, false, $this->svn_path);
             } else {
-                $commit_question = new ConfirmationQuestion('<question>Commit changes to SVN trunk? (y/N)</question> ', false);
-                if ($this->getHelper('question')->ask($input, $output, $commit_question)) {
+                $commitQuestion = new ConfirmationQuestion('<question>Commit changes to SVN trunk? (y/N)</question> ', false);
+                if ($this->getHelper('question')->ask($input, $output, $commitQuestion)) {
                     $this->run_process([ 'svn', 'commit', '-m', "Release version {$new_version}" ], $output, false, $this->svn_path);
                 }
             }
