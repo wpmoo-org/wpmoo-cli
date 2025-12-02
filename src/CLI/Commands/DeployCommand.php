@@ -120,11 +120,9 @@ class DeployCommand extends BaseCommand
         $this->run_shell_command_wrapper('git archive HEAD | tar -x -C ' . escapeshellarg($build_path), $output, true);
 
         // After git archive, copy built assets if they exist (e.g. from build processes)
-        $srcAssetsPath = $this->get_cwd() . '/src/assets';
-        $distSrcAssetsPath = $build_path . '/src/assets';
-        if (is_dir($srcAssetsPath)) {
-            $this->run_process([ 'mkdir', '-p', dirname($distSrcAssetsPath) ], $output);
-            $this->run_process([ 'cp', '-r', $srcAssetsPath, dirname($distSrcAssetsPath) . '/' ], $output);
+        $assetsPath = $this->get_cwd() . '/assets';
+        if (is_dir($assetsPath)) {
+            $this->run_process([ 'cp', '-r', $assetsPath, $build_path . '/' ], $output);
         }
 
         // For WPMoo-based plugins, include the WPMoo framework separately to avoid dependency conflicts
