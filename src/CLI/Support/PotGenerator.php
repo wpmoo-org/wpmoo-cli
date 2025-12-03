@@ -15,62 +15,44 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
  */
 class PotGenerator
 {
-    /**
-     * @var string The base working directory.
-     */
     private $cwd;
+    private $projectRoot;
 
-    /**
-     * Constructor.
-     *
-     * @param string|null $cwd Optional working directory. Defaults to current working directory.
-     */
-    public function __construct(?string $cwd = null)
+    public function __construct(string $projectRoot, ?string $cwd = null)
     {
+        $this->projectRoot = $projectRoot;
         $this->cwd = $cwd ?: getcwd();
     }
 
-    /**
-     * Generate POT files based on project type.
-     *
-     * @param array $project The project configuration array.
-     * @param callable|null $outputCallback Optional callback for outputting progress.
-     * @return bool True on success.
-     * @throws ProcessFailedException If the WP-CLI command fails.
-     */
     public function generate(array $project, ?callable $outputCallback = null): bool
     {
         $wp_bin = $this->cwd . '/vendor/bin/wp';
 
         if (!file_exists($wp_bin)) {
-            // Fallback to global wp if local one doesn't exist
             $wp_bin = 'wp';
         }
 
         if ($project['type'] === 'wpmoo-framework') {
-            // 1. Generate Core POT
             $this->run_make_pot(
                 $wp_bin,
-                $this->cwd . '/src',
-                $this->cwd . '/languages/wpmoo.pot',
+                $this->projectRoot . '/src',
+                $this->projectRoot . '/languages/wpmoo.pot',
                 'wpmoo',
                 'vendor,node_modules',
                 $outputCallback
             );
 
-            // 2. Generate Samples POT
             $this->run_make_pot(
                 $wp_bin,
-                $this->cwd . '/samples',
-                $this->cwd . '/languages/wpmoo-samples.pot',
+                $this->projectRoot . '/samples',
+                $this->projectRoot . '/languages/wpmoo-samples.pot',
                 'wpmoo-samples',
                 '',
                 $outputCallback
             );
         } else {
-            // Standard Plugin
             $domain = $project['name'] ?? 'plugin';
-            $pot_file = $this->cwd . "/languages/{$domain}.pot";
+            $pot_file = $this->projectRoot . "/languages/{$domain}.pot";
 
             if (!is_dir(dirname($pot_file))) {
                 mkdir(dirname($pot_file), 0755, true);
@@ -78,7 +60,7 @@ class PotGenerator
 
             $this->run_make_pot(
                 $wp_bin,
-                $this->cwd,
+                $this->projectRoot,
                 $pot_file,
                 $domain,
                 'vendor,node_modules,dist,tests',
