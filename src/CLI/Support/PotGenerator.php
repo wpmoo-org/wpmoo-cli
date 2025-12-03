@@ -35,17 +35,28 @@ class PotGenerator
             $wp_bin = 'wp';
         }
 
-        // Read custom headers from wpmoo-config.yml
-        $headers = [];
+        // Set default headers to WPMoo's information.
+        $headers = [
+            'Language-Team' => 'WPMoo Team <hello@wpmoo.org>',
+            'Last-Translator' => 'WPMoo <hello@wpmoo.org>',
+            'Report-Msgid-Bugs-To' => 'https://github.com/wpmoo/wpmoo/issues',
+        ];
+
+        // Read and merge custom headers from wpmoo-config.yml if it exists.
         $config_file = $this->projectRoot . '/wpmoo-config.yml';
         if (file_exists($config_file)) {
             $config = Yaml::parseFile($config_file);
             if (isset($config['localization'])) {
-                $headers = [
-                    'Language-Team' => $config['localization']['team'] ?? 'WPMoo Team <hello@wpmoo.org>',
-                    'Last-Translator' => $config['localization']['translator'] ?? 'WPMoo <hello@wpmoo.org>',
-                    'Report-Msgid-Bugs-To' => $config['localization']['bug_reports'] ?? 'https://github.com/wpmoo/wpmoo/issues',
-                ];
+                // Only override if the keys are set and not empty in the config.
+                if (!empty($config['localization']['team'])) {
+                    $headers['Language-Team'] = $config['localization']['team'];
+                }
+                if (!empty($config['localization']['translator'])) {
+                    $headers['Last-Translator'] = $config['localization']['translator'];
+                }
+                if (!empty($config['localization']['bug_reports'])) {
+                    $headers['Report-Msgid-Bugs-To'] = $config['localization']['bug_reports'];
+                }
             }
         }
 
