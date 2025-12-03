@@ -27,8 +27,8 @@ class PotGenerator
      */
     public function generate_pot_file(string $source_path, string $output_file, string $domain, array $exclude = []): bool
     {
-        $translations = new Translations();
-        $translations->setDomain($domain);
+        // 1. Extract ALL strings first (don't set domain yet)
+        $all_translations = new Translations();
 
         // Define options for scanning.
         $options = [
@@ -53,13 +53,23 @@ class PotGenerator
         ];
 
         // Extract translations from the source path - scan directory for PHP files.
-        $this->extract_from_directory($source_path, $translations, $options);
+        $this->extract_from_directory($source_path, $all_translations, $options);
 
-        // Set headers.
+        // 2. Filter for the specific domain
+        $translations = new Translations();
+        $translations->setDomain($domain);
         $translations->setHeader('Project-Id-Version', 'WPMoo Framework');
         $translations->setHeader('POT-Creation-Date', date('Y-m-d H:i:sO'));
         $translations->setHeader('Language', 'en_US');
         $translations->setHeader('Content-Type', 'text/plain; charset=UTF-8');
+
+        foreach ($all_translations as $translation) {
+            // Check if the translation belongs to our domain
+            // Note: In gettext/gettext 4.x, getDomain() returns the domain of the string found in source
+            if ($translation->getDomain() === $domain) {
+                $translations[] = $translation;
+            }
+        }
 
         // Generate the .pot file content.
         $pot_content = Po::toString($translations);
