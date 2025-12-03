@@ -86,44 +86,31 @@ class DeployCommand extends BaseCommand
         }
 
         // 2. Build assets.
-        $output->writeln('> Building assets with Gulp...');
+        $output->writeln('> Building assets...');
         try {
-            $this->run_process([ 'gulp', 'build' ], $output);
+            $this->run_process($this->get_build_command(), $output);
         } catch (ProcessFailedException $e) {
-            if ($e->getProcess()->getExitCode() === 127) {
-                $helper = $this->getHelper('question');
-                $question = new ChoiceQuestion(
-                    '<error>Gulp not found.</error> Dependencies might be missing. Which package manager do you want to use to install them?',
-                    [ 'npm', 'yarn', 'bun', 'pnpm', 'cancel' ],
-                    0
-                );
-
-                $manager = $helper->ask($input, $output, $question);
-
-                if ($manager === 'cancel') {
-                    $output->writeln('<error>Build cancelled.</error>');
-                    return self::FAILURE;
-                }
-
-                $output->writeln("> Installing dependencies with $manager...");
-                $this->run_process([ $manager, 'install' ], $output);
-
-                $output->writeln("> Retrying build with $manager...");
-                $this->run_process([ $manager, 'run', 'build' ], $output);
-            } else {
-                throw $e;
-            }
+            throw $e;
         }
 
-        // 3. Generate POT file.
-        $output->writeln('> Generating .pot file...');
+        // 3. Generate POT files.
+        $output->writeln('> Generating wpmoo.pot file...');
         $potGenerator = new PotGenerator();
         $potGenerator->generate_pot_file(
             $this->get_cwd() . '/src',
             $this->get_cwd() . '/languages/wpmoo.pot',
-            [ 'samples', 'vendor', 'node_modules' ]
+            'wpmoo', // Domain for framework
+            [ 'vendor', 'node_modules' ]
         );
         $output->writeln('<info>languages/wpmoo.pot file updated.</info>');
+
+        $output->writeln('> Generating wpmoo-samples.pot file...');
+        $potGenerator->generate_pot_file(
+            $this->get_cwd() . '/samples',
+            $this->get_cwd() . '/languages/wpmoo-samples.pot',
+            'wpmoo-samples' // Domain for samples
+        );
+        $output->writeln('<info>languages/wpmoo-samples.pot file updated.</info>');
 
         // 4. Run checks.
         $output->writeln('> Running checks...');
@@ -325,5 +312,20 @@ class DeployCommand extends BaseCommand
         } else {
             $this->run_process([ 'svn', 'commit', '-m', "Tagging version {$version_string}" ], $output, false, $this->svn_path);
         }
+    }
+
+    private function get_build_command(): array
+    {
+        $cwd = $this->get_cwd();
+        if (file_exists($cwd . '/yarn.lock')) {
+            return [ 'yarn', 'build' ];
+        }
+        if (file_exists($cwd . '/pnpm-lock.yaml')) {
+            return [ 'pnpm', 'build' ];
+        }
+        if (file_exists($cwd . '/bun.lockb')) {
+            return [ 'bun', 'run', 'build' ];
+        }
+        return [ 'npm', 'run', 'build' ];
     }
 }

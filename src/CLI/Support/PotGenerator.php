@@ -25,15 +25,16 @@ class PotGenerator
      * @param array  $exclude    An array of directory names to exclude from the scan.
      * @return bool True on success, false on failure.
      */
-    public function generate_pot_file(string $source_path, string $output_file, array $exclude = []): bool
+    public function generate_pot_file(string $source_path, string $output_file, string $domain, array $exclude = []): bool
     {
         $translations = new Translations();
-        $translations->setDomain('wpmoo');
+        $translations->setDomain($domain);
 
         // Define options for scanning.
         $options = [
             'excluded_directories' => $exclude,
             'extract_comments' => [ 'translators:' ],
+            'functions' => PhpCode::getWordpressFunctions(),
         ];
 
         // Extract translations from the source path - scan directory for PHP files.
