@@ -4,7 +4,6 @@ namespace WPMoo\CLI\Commands;
 
 use WPMoo\CLI\Support\BaseCommand;
 use WPMoo\CLI\Support\VersionManager;
-use WPMoo\CLI\Support\PotGenerator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -94,23 +93,51 @@ class DeployCommand extends BaseCommand
         }
 
         // 3. Generate POT files.
-        $output->writeln('> Generating wpmoo.pot file...');
-        $potGenerator = new PotGenerator();
-        $potGenerator->generate_pot_file(
-            $this->get_cwd() . '/src',
-            $this->get_cwd() . '/languages/wpmoo.pot',
-            'wpmoo', // Domain for framework
-            [ 'vendor', 'node_modules' ]
-        );
-        $output->writeln('<info>languages/wpmoo.pot file updated.</info>');
+        $output->writeln('> Generating POT files...');
+        
+        if ($project['type'] === 'wpmoo-framework') {
+            // For Framework: Generate core and samples POTs
+            $output->writeln('  > Generating wpmoo.pot (Core)...');
+            $this->run_process([
+                $this->get_cwd() . '/vendor/bin/wp', 'i18n', 'make-pot',
+                $this->get_cwd() . '/src',
+                $this->get_cwd() . '/languages/wpmoo.pot',
+                '--domain=wpmoo',
+                '--exclude=vendor,node_modules'
+            ], $output);
 
-        $output->writeln('> Generating wpmoo-samples.pot file...');
-        $potGenerator->generate_pot_file(
-            $this->get_cwd() . '/samples',
-            $this->get_cwd() . '/languages/wpmoo-samples.pot',
-            'wpmoo-samples' // Domain for samples
-        );
-        $output->writeln('<info>languages/wpmoo-samples.pot file updated.</info>');
+            $output->writeln('  > Generating wpmoo-samples.pot (Samples)...');
+            $this->run_process([
+                $this->get_cwd() . '/vendor/bin/wp', 'i18n', 'make-pot',
+                $this->get_cwd() . '/samples',
+                $this->get_cwd() . '/languages/wpmoo-samples.pot',
+                '--domain=wpmoo-samples'
+            ], $output);
+            
+        } else {
+            // For Plugins: Generate single POT file based on plugin text-domain
+            // Assuming text-domain matches project name (or derived from header if available)
+            // Here we use project name as a fallback for filename
+            $domain = $project['name'] ?? 'plugin'; 
+            $potFile = $this->get_cwd() . "/languages/{$domain}.pot";
+            
+            $output->writeln("  > Generating {$domain}.pot...");
+            
+            // Ensure languages dir exists
+            if (!is_dir(dirname($potFile))) {
+                mkdir(dirname($potFile), 0755, true);
+            }
+
+            $this->run_process([
+                $this->get_cwd() . '/vendor/bin/wp', 'i18n', 'make-pot',
+                $this->get_cwd(),
+                $potFile,
+                "--domain={$domain}",
+                '--exclude=vendor,node_modules,dist,tests'
+            ], $output);
+        }
+        
+        $output->writeln('<info>POT files updated successfully.</info>');
 
         // 4. Run checks.
         $output->writeln('> Running checks...');

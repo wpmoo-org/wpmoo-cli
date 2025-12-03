@@ -43,12 +43,12 @@
   "bin": [
     "bin/moo"
   ],
-  "require-dev": {
-    "wpmoo/wpmoo-coding-standards": "dev-main",
-    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-    "phpstan/phpstan": "^1.11"
-  },
-  "config": {
+      "require-dev": {
+          "wpmoo/wpmoo-coding-standards": "dev-main",
+          "wp-cli/i18n-command": "^2.1",
+          "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+          "phpstan/phpstan": "^1.11"
+      },  "config": {
     "allow-plugins": {
       "dealerdirect/phpcodesniffer-composer-installer": true,
       "phpstan/extension-installer": true

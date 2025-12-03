@@ -74,51 +74,44 @@ class PotGenerator
     private function extract_strings(string $content, string $domain, string $file_path, array &$strings): void
     {
         // Regex patterns for WP translation functions
-        // Note: We use single quotes mostly in PHP, but support double quotes too.
-        // Capture groups: 1=quote, 2=string, 3=context/plural (optional), 4=domain
+        // Capture groups: 1=quote, 2=string, 3=quote, 4=context/plural/domain
         
-        // Standard: __, _e, esc_attr__, esc_html__, etc.
-        // Pattern: func ( 'string' , 'domain' )
+        // 1. Standard: __, _e, esc_attr__, etc. (2 args: text, domain)
+        // Pattern: func ( 'text' , 'domain' )
         $pattern_standard = '/\b(?:__|_e|esc_attr__|esc_attr_e|esc_html__|esc_html_e)\s*\(\s*([\'"])(.*?)(?<!\\)\1\s*,\s*([\'"])(.*?)(?<!\\)\3\s*\)/s';
         
         if (preg_match_all($pattern_standard, $content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
-                $found_domain = $match[4];
-                if ($found_domain === $domain) {
-                    $msgid = $match[2];
-                    $this->add_string($strings, $msgid, $file_path);
+                // $match[2] is string, $match[4] is domain
+                if ($match[4] === $domain) {
+                    $this->add_string($strings, $match[2], $file_path);
                 }
             }
         }
 
-        // Context: _x, esc_attr_x, esc_html_x, _ex
-        // Pattern: func ( 'string' , 'context' , 'domain' )
+        // 2. Context: _x, esc_attr_x, esc_html_x, _ex (3 args: text, context, domain)
+        // Pattern: func ( 'text' , 'context' , 'domain' )
         $pattern_context = '/\b(?:_x|esc_attr_x|esc_html_x|_ex)\s*\(\s*([\'"])(.*?)(?<!\\)\1\s*,\s*([\'"])(.*?)(?<!\\)\3\s*,\s*([\'"])(.*?)(?<!\\)\5\s*\)/s';
 
         if (preg_match_all($pattern_context, $content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
-                $found_domain = $match[6];
-                if ($found_domain === $domain) {
-                    $msgid = $match[2];
-                    $context = $match[4];
-                    $this->add_string($strings, $msgid, $file_path, $context);
+                // $match[2] is string, $match[4] is context, $match[6] is domain
+                if ($match[6] === $domain) {
+                    $this->add_string($strings, $match[2], $file_path, $match[4]);
                 }
             }
         }
 
-        // Plural: _n, _n_noop
-        // Pattern: func ( 'single' , 'plural' , number , 'domain' )
-        // This is harder because number can be a variable. We look for the last string argument.
-        // Simplified regex for: _n ( 'single' , 'plural' , ... , 'domain' )
+        // 3. Plural: _n, _n_noop (4 args: single, plural, number, domain)
+        // Pattern: func ( 'single' , 'plural' , ... , 'domain' )
+        // Note: The number argument is variable, so we use greedy matching until the last comma+string
         $pattern_plural = '/\b(?:_n|_n_noop)\s*\(\s*([\'"])(.*?)(?<!\\)\1\s*,\s*([\'"])(.*?)(?<!\\)\3\s*,.*,\s*([\'"])(.*?)(?<!\\)\5\s*\)/s';
         
         if (preg_match_all($pattern_plural, $content, $matches, PREG_SET_ORDER)) {
             foreach ($matches as $match) {
-                $found_domain = $match[6];
-                if ($found_domain === $domain) {
-                    $msgid = $match[2];
-                    $plural = $match[4];
-                    $this->add_string($strings, $msgid, $file_path, null, $plural);
+                 // $match[2] single, $match[4] plural, $match[6] domain
+                if ($match[6] === $domain) {
+                    $this->add_string($strings, $match[2], $file_path, null, $match[4]);
                 }
             }
         }
@@ -152,14 +145,13 @@ class PotGenerator
         $output .= "msgstr \"\"\n";
         $output .= "\"Project-Id-Version: WPMoo Framework\\n\"\n";
         $output .= "\"Report-Msgid-Bugs-To: \\n\"\n";
-        $output .= "\"POT-Creation-Date: " . date('Y-m-d H:i:sO') . "\n"
-        $output .= "\"Language: en_US\n"
-        $output .= "\"MIME-Version: 1.0\n"
-        $output .= "\"Content-Type: text/plain; charset=UTF-8\n"
-        $output .= "\"Content-Transfer-Encoding: 8bit\n"
-        $output .= "\"X-Generator: WPMoo CLI\n"
-        $output .= "\"X-Domain: {$domain}\n"
-        $output .= "\n";
+        $output .= "\"POT-Creation-Date: " . date('Y-m-d H:i:sO') . "\\n\"\n";
+        $output .= "\"Language: en_US\\n\"\n";
+        $output .= "\"MIME-Version: 1.0\\n\"\n";
+        $output .= "\"Content-Type: text/plain; charset=UTF-8\\n\"\n";
+        $output .= "\"Content-Transfer-Encoding: 8bit\\n\"\n";
+        $output .= "\"X-Generator: WPMoo CLI\\n\"\n";
+        $output .= "\"X-Domain: {$domain}\\n\"\n";        $output .= "\n";
 
         foreach ($strings as $str) {
             // Comments (Files)
