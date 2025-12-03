@@ -72,46 +72,75 @@ class Filesystem
         return false;
     }
 
-    /**
-     * Checks if a file or directory exists.
-     *
-     * @param string $path The path to check.
-     * @return bool True if the path exists, false otherwise.
-     */
-    public function exists(string $path): bool
+        /**
+
+         * Checks if a file or directory exists.
+
+         *
+
+         * @param string $path The path to check.
+
+         * @return bool True if the path exists, false otherwise.
+
+         */
+
+    public function file_exists(string $path): bool
     {
+
         if ($this->wp_filesystem) {
             return $this->wp_filesystem->exists($path);
         }
+
         return file_exists($path);
     }
 
-    /**
-     * Gets the content of a file.
-     *
-     * @param string $path The path to the file.
-     * @return string|false The file content or false on failure.
-     */
-    public function get_contents(string $path)
+
+
+        /**
+
+         * Gets the content of a file.
+
+         *
+
+         * @param string $path The path to the file.
+
+         * @return string|false The file content or false on failure.
+
+         */
+
+    public function get_file_contents(string $path)
     {
+
         if ($this->wp_filesystem) {
             return $this->wp_filesystem->get_contents($path);
         }
+
         return file_get_contents($path);
     }
 
-    /**
-     * Writes content to a file.
-     *
-     * @param string $path The path to the file.
-     * @param string $content The content to write.
-     * @return bool True on success, false on failure.
-     */
-    public function put_contents(string $path, string $content): bool
+
+
+        /**
+
+         * Writes content to a file.
+
+         *
+
+         * @param string $path The path to the file.
+
+         * @param string $content The content to write.
+
+         * @return bool True on success, false on failure.
+
+         */
+
+    public function put_file_contents(string $path, string $content): bool
     {
+
         if ($this->wp_filesystem) {
             return $this->wp_filesystem->put_contents($path, $content);
         }
+
         return (bool) file_put_contents($path, $content);
     }
 

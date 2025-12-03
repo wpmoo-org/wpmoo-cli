@@ -124,5 +124,31 @@ class PotGenerator
 
         $process = new Process($command);
         $process->mustRun(); // Throws ProcessFailedException on error
+
+        // After generation, prepend the copyright text.
+        $this->prepend_copyright_to_pot(
+            $dest,
+            $this->config_manager->get(
+                'localization.copyright_text',
+                "# Copyright (C) 2025 wpmoo.org\n# This file is distributed under the GPL-2.0+.\n"
+            )
+        );
+    }
+
+    /**
+     * Prepends copyright information to the generated .pot file.
+     *
+     * @param string $pot_file_path Path to the .pot file.
+     * @param string $copyright_text The copyright text to prepend.
+     * @return void
+     */
+    private function prepend_copyright_to_pot(string $pot_file_path, string $copyright_text): void
+    {
+        if (!file_exists($pot_file_path)) {
+            return;
+        }
+
+        $current_content = file_get_contents($pot_file_path);
+        file_put_contents($pot_file_path, $copyright_text . "\n" . $current_content);
     }
 }

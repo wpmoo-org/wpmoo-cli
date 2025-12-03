@@ -98,8 +98,8 @@ class CLIApplication extends Application
 
         $composer_file = $current_working_directory . '/composer.json';
 
-        if ($this->file_system->exists($composer_file)) {
-            $composer_data = json_decode($this->file_system->get_contents($composer_file), true);
+        if ($this->file_system->file_exists($composer_file)) {
+            $composer_data = json_decode($this->file_system->get_file_contents($composer_file), true);
             if (isset($composer_data['name'])) {
                 $package_name = $composer_data['name'];
 
@@ -115,7 +115,7 @@ class CLIApplication extends Application
         $php_files = $this->file_system->glob($current_working_directory . '/*.php');
         if ($php_files) {
             foreach ($php_files as $file) {
-                $content = $this->file_system->get_contents($file);
+                $content = $this->file_system->get_file_contents($file);
                 // Look for WPMoo in plugin header or usage.
                 if (
                     preg_match('/(wpmoo|WPMoo)/i', $content) &&
@@ -126,6 +126,7 @@ class CLIApplication extends Application
                 }
             }
         }
+
 
         // Default to plugin behavior if we can't clearly determine.
         return 'wpmoo-plugin';
@@ -229,8 +230,8 @@ class CLIApplication extends Application
     {
         $composer_file = dirname(__DIR__, 3) . '/composer.json';
 
-        if ($this->file_system->exists($composer_file)) {
-            $composer_data = json_decode($this->file_system->get_contents($composer_file), true);
+        if ($this->file_system->file_exists($composer_file)) {
+            $composer_data = json_decode($this->file_system->get_file_contents($composer_file), true);
             if (isset($composer_data['version'])) {
                 return $composer_data['version'];
             }
