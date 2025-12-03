@@ -25,7 +25,8 @@
     "symfony/yaml": "^5.4",
     "symfony/filesystem": "^5.4",
     "symfony/process": "^5.4",
-    "gettext/gettext": "^4.8"
+    "gettext/gettext": "^4.8",
+    "wp-cli/i18n-command": "^2.1"
   },
   "extra": {
     "branch-alias": {
@@ -45,7 +46,6 @@
   ],
       "require-dev": {
           "wpmoo/wpmoo-coding-standards": "dev-main",
-          "wp-cli/i18n-command": "^2.1",
           "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
           "phpstan/phpstan": "^1.11"
       },  "config": {

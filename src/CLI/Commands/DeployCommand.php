@@ -225,9 +225,9 @@ class DeployCommand extends BaseCommand
         return self::SUCCESS;
     }
 
-    private function run_process(array $command, OutputInterface $output, bool $quiet = false, ?string $cwd = null)
+    private function run_process(array $command, OutputInterface $output, bool $quiet = false, ?string $cwd = null, array $env = []): void
     {
-        $process = new Process($command, $cwd);
+        $process = new Process($command, $cwd, $env);
         $process->mustRun(
             function ($type, $buffer) use ($output, $quiet) {
                 if (! $quiet) {

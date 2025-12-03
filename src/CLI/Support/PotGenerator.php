@@ -26,9 +26,11 @@ class PotGenerator
 
     public function generate(array $project, ?callable $outputCallback = null): bool
     {
-        $wp_bin = $this->cwd . '/vendor/bin/wp';
+        // Look for wp binary in the project root vendor/bin
+        $wp_bin = $this->projectRoot . '/vendor/bin/wp';
 
         if (!file_exists($wp_bin)) {
+            // Fallback to global wp if local one doesn't exist
             $wp_bin = 'wp';
         }
 
