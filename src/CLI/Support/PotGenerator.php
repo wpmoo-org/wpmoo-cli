@@ -16,19 +16,33 @@ use Symfony\Component\Yaml\Yaml;
  */
 class PotGenerator
 {
-    private $cwd;
-    private $projectRoot;
+    /**
+     * @var ConfigManager The project configuration manager.
+     */
+    private ConfigManager $config_manager;
 
-    public function __construct(string $projectRoot, ?string $cwd = null)
+    /**
+     * PotGenerator constructor.
+     *
+     * @param ConfigManager $config_manager The configuration manager instance.
+     */
+    public function __construct(ConfigManager $config_manager)
     {
-        $this->projectRoot = $projectRoot;
-        $this->cwd = $cwd ?: getcwd();
+        $this->config_manager = $config_manager;
     }
 
     public function generate(array $project, ?callable $outputCallback = null): bool
     {
+        $project_root = $this->config_manager->get_project_root();
+        if (!$project_root) {
+            if ($outputCallback) {
+                $outputCallback('error', 'Could not find project root.');
+            }
+            return false;
+        }
+
         // Look for wp binary in the project root vendor/bin
-        $wp_bin = $this->projectRoot . '/vendor/bin/wp';
+        $wp_bin = $project_root . '/vendor/bin/wp';
 
         if (!file_exists($wp_bin)) {
             // Fallback to global wp if local one doesn't exist
@@ -37,34 +51,16 @@ class PotGenerator
 
         // Set default headers to WPMoo's information.
         $headers = [
-            'Language-Team' => 'WPMoo Team <hello@wpmoo.org>',
-            'Last-Translator' => 'WPMoo <hello@wpmoo.org>',
-            'Report-Msgid-Bugs-To' => 'https://github.com/wpmoo/wpmoo/issues',
+            'Language-Team' => $this->config_manager->get('localization.team', 'WPMoo Team <hello@wpmoo.org>'),
+            'Last-Translator' => $this->config_manager->get('localization.translator', 'WPMoo <hello@wpmoo.org>'),
+            'Report-Msgid-Bugs-To' => $this->config_manager->get('localization.bug_reports', 'https://github.com/wpmoo/wpmoo/issues'),
         ];
-
-        // Read and merge custom headers from wpmoo-config.yml if it exists.
-        $config_file = $this->projectRoot . '/wpmoo-config.yml';
-        if (file_exists($config_file)) {
-            $config = Yaml::parseFile($config_file);
-            if (isset($config['localization'])) {
-                // Only override if the keys are set and not empty in the config.
-                if (!empty($config['localization']['team'])) {
-                    $headers['Language-Team'] = $config['localization']['team'];
-                }
-                if (!empty($config['localization']['translator'])) {
-                    $headers['Last-Translator'] = $config['localization']['translator'];
-                }
-                if (!empty($config['localization']['bug_reports'])) {
-                    $headers['Report-Msgid-Bugs-To'] = $config['localization']['bug_reports'];
-                }
-            }
-        }
 
         if ($project['type'] === 'wpmoo-framework') {
             $this->run_make_pot(
                 $wp_bin,
-                $this->projectRoot . '/src',
-                $this->projectRoot . '/languages/wpmoo.pot',
+                $project_root . '/src',
+                $project_root . '/languages/wpmoo.pot',
                 'wpmoo',
                 'vendor,node_modules',
                 $headers,
@@ -73,16 +69,16 @@ class PotGenerator
 
             $this->run_make_pot(
                 $wp_bin,
-                $this->projectRoot . '/samples',
-                $this->projectRoot . '/languages/wpmoo-samples.pot',
+                $project_root . '/samples',
+                $project_root . '/languages/wpmoo-samples.pot',
                 'wpmoo-samples',
                 '',
                 $headers,
                 $outputCallback
             );
         } else {
-            $domain = $project['name'] ?? 'plugin';
-            $pot_file = $this->projectRoot . "/languages/{$domain}.pot";
+            $domain = $this->config_manager->get('project.text_domain', 'plugin');
+            $pot_file = $project_root . "/languages/{$domain}.pot";
 
             if (!is_dir(dirname($pot_file))) {
                 mkdir(dirname($pot_file), 0755, true);
@@ -90,7 +86,7 @@ class PotGenerator
 
             $this->run_make_pot(
                 $wp_bin,
-                $this->projectRoot,
+                $project_root,
                 $pot_file,
                 $domain,
                 'vendor,node_modules,dist,tests',

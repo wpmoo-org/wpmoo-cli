@@ -29,16 +29,16 @@ use WPMoo\CLI\Support\Filesystem;
 class CLIApplication extends Application
 {
     /**
-     * @var Filesystem $filesystem The filesystem abstraction layer.
+     * @var Filesystem $file_system The filesystem abstraction layer.
      */
-    private Filesystem $filesystem;
+    private Filesystem $file_system;
 
     /**
      * Constructor to register commands.
      */
     public function __construct()
     {
-        $this->filesystem = new Filesystem();
+        $this->file_system = new Filesystem();
 
         // Get version from composer.json or use a default.
         $version = $this->get_version();
@@ -98,8 +98,8 @@ class CLIApplication extends Application
 
         $composer_file = $current_working_directory . '/composer.json';
 
-        if ($this->filesystem->exists($composer_file)) {
-            $composer_data = json_decode($this->filesystem->get_contents($composer_file), true);
+        if ($this->file_system->exists($composer_file)) {
+            $composer_data = json_decode($this->file_system->get_contents($composer_file), true);
             if (isset($composer_data['name'])) {
                 $package_name = $composer_data['name'];
 
@@ -112,10 +112,10 @@ class CLIApplication extends Application
         }
 
         // Check if this looks like a WPMoo-based plugin by looking for WPMoo usage.
-        $php_files = $this->filesystem->glob($current_working_directory . '/*.php');
+        $php_files = $this->file_system->glob($current_working_directory . '/*.php');
         if ($php_files) {
             foreach ($php_files as $file) {
-                $content = $this->filesystem->get_contents($file);
+                $content = $this->file_system->get_contents($file);
                 // Look for WPMoo in plugin header or usage.
                 if (
                     preg_match('/(wpmoo|WPMoo)/i', $content) &&
@@ -165,7 +165,6 @@ class CLIApplication extends Application
                 $filtered_commands[] = $command;
             } elseif ($command instanceof HelpCommand) {
                 // Keep HelpCommand for functionality, but hide it.
-                $command->setHidden(true);
                 $filtered_commands[] = $command;
             }
         }
@@ -230,8 +229,8 @@ class CLIApplication extends Application
     {
         $composer_file = dirname(__DIR__, 3) . '/composer.json';
 
-        if ($this->filesystem->exists($composer_file)) {
-            $composer_data = json_decode($this->filesystem->get_contents($composer_file), true);
+        if ($this->file_system->exists($composer_file)) {
+            $composer_data = json_decode($this->file_system->get_contents($composer_file), true);
             if (isset($composer_data['version'])) {
                 return $composer_data['version'];
             }

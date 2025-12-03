@@ -118,7 +118,7 @@ class UpdateCommand extends BaseCommand
         try {
             // Using the PotGenerator class from the CLI support
             $project_info = $this->identify_project();
-            $pot_generator = new \WPMoo\CLI\Support\PotGenerator($project_info['root_path']);
+            $pot_generator = new \WPMoo\CLI\Support\PotGenerator($this->config_manager);
             $symfony_io = new SymfonyStyle($input, $output);
 
             $output_callback = function (string $type, string $message) use ($symfony_io) {

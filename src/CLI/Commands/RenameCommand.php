@@ -364,17 +364,17 @@ class RenameCommand extends BaseCommand
         string $new_namespace,
         string $new_text_domain
     ) {
-        $configFile = $dir . '/wpmoo-config.yml';
+        $config_file = $dir . '/wpmoo-config.yml';
         $config = [];
-        if (file_exists($configFile)) {
-            $config = Yaml::parseFile($configFile);
+        if (file_exists($config_file)) {
+            $config = Yaml::parseFile($config_file);
         }
 
         $config['project']['name'] = $new_name;
         $config['project']['namespace'] = $new_namespace;
         $config['project']['text_domain'] = $new_text_domain;
 
-        file_put_contents($configFile, Yaml::dump($config, 2));
+        file_put_contents($config_file, Yaml::dump($config, 2));
     }
 
     /**
@@ -882,9 +882,9 @@ class RenameCommand extends BaseCommand
      */
     private function get_project_config(string $dir): array
     {
-        $configFile = $dir . '/wpmoo-config.yml';
-        if (file_exists($configFile)) {
-            $config = Yaml::parseFile($configFile);
+        $config_file = $dir . '/wpmoo-config.yml';
+        if (file_exists($config_file)) {
+            $config = Yaml::parseFile($config_file);
             if (isset($config['project'])) {
                 // Ensure all expected keys are present, even if empty.
                 return array_merge(

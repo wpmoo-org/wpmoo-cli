@@ -7,6 +7,7 @@ use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use WPMoo\CLI\Interfaces\CommandInterface;
+use WPMoo\CLI\Support\ConfigManager;
 
 /**
  * Base command class for the WPMoo CLI.
@@ -22,13 +23,23 @@ use WPMoo\CLI\Interfaces\CommandInterface;
 abstract class BaseCommand extends Command implements CommandInterface
 {
     /**
-     * Execute the command.
-     *
-     * @param InputInterface $input Command input.
-     * @param OutputInterface $output Command output.
-     * @return int Exit status (0 for success, non-zero for failure).
+     * @var ConfigManager The project configuration manager.
      */
-    final protected function execute(InputInterface $input, OutputInterface $output): int
+    protected ConfigManager $config_manager;
+
+    /**
+     * BaseCommand constructor.
+     */
+    public function __construct()
+    {
+        parent::__construct();
+        $this->config_manager = new ConfigManager();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    protected function execute(InputInterface $input, OutputInterface $output)
     {
         // Force output decoration to ensure colors are always displayed.
         $output->setDecorated(true);
