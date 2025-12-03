@@ -10,7 +10,9 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 
 /**
  * Deploy command for the WPMoo CLI.
@@ -85,7 +87,33 @@ class DeployCommand extends BaseCommand
 
         // 2. Build assets.
         $output->writeln('> Building assets with Gulp...');
-        $this->run_process([ 'gulp', 'build' ], $output);
+        try {
+            $this->run_process([ 'gulp', 'build' ], $output);
+        } catch (ProcessFailedException $e) {
+            if ($e->getProcess()->getExitCode() === 127) {
+                $helper = $this->getHelper('question');
+                $question = new ChoiceQuestion(
+                    '<error>Gulp not found.</error> Dependencies might be missing. Which package manager do you want to use to install them?',
+                    [ 'npm', 'yarn', 'bun', 'pnpm', 'cancel' ],
+                    0
+                );
+
+                $manager = $helper->ask($input, $output, $question);
+
+                if ($manager === 'cancel') {
+                    $output->writeln('<error>Build cancelled.</error>');
+                    return self::FAILURE;
+                }
+
+                $output->writeln("> Installing dependencies with $manager...");
+                $this->run_process([ $manager, 'install' ], $output);
+
+                $output->writeln("> Retrying build with $manager...");
+                $this->run_process([ $manager, 'run', 'build' ], $output);
+            } else {
+                throw $e;
+            }
+        }
 
         // 3. Generate POT file.
         $output->writeln('> Generating .pot file...');
