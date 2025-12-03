@@ -34,7 +34,22 @@ class PotGenerator
         $options = [
             'excluded_directories' => $exclude,
             'extract_comments' => [ 'translators:' ],
-            'functions' => PhpCode::getWordpressFunctions(),
+            'functions' => [
+                '__' => 'text_domain',
+                '_e' => 'text_domain',
+                '_x' => 'text_context_domain',
+                'esc_html__' => 'text_domain',
+                'esc_html_e' => 'text_domain',
+                'esc_html_x' => 'text_context_domain',
+                'esc_attr__' => 'text_domain',
+                'esc_attr_e' => 'text_domain',
+                'esc_attr_x' => 'text_context_domain',
+                '_ex' => 'text_context_domain',
+                '_n' => 'text_plural_domain',
+                '_nx' => 'text_plural_context_domain',
+                '_n_noop' => 'text_plural_domain',
+                '_nx_noop' => 'text_plural_context_domain',
+            ],
         ];
 
         // Extract translations from the source path - scan directory for PHP files.
