@@ -13,6 +13,7 @@ use WPMoo\CLI\Commands\RenameCommand;
 use WPMoo\CLI\Commands\DeployCommand;
 use WPMoo\CLI\Commands\UpdateCommand;
 use WPMoo\CLI\Support\Banner;
+use WPMoo\CLI\Support\Filesystem;
 
 /**
  * WPMoo CLI Application.
@@ -28,10 +29,17 @@ use WPMoo\CLI\Support\Banner;
 class CLIApplication extends Application
 {
     /**
+     * @var Filesystem $filesystem The filesystem abstraction layer.
+     */
+    private Filesystem $filesystem;
+
+    /**
      * Constructor to register commands.
      */
     public function __construct()
     {
+        $this->filesystem = new Filesystem();
+
         // Get version from composer.json or use a default.
         $version = $this->get_version();
         parent::__construct('WPMoo CLI', $version);
@@ -90,8 +98,8 @@ class CLIApplication extends Application
 
         $composer_file = $current_working_directory . '/composer.json';
 
-        if (file_exists($composer_file)) {
-            $composer_data = json_decode(file_get_contents($composer_file), true);
+        if ($this->filesystem->exists($composer_file)) {
+            $composer_data = json_decode($this->filesystem->get_contents($composer_file), true);
             if (isset($composer_data['name'])) {
                 $package_name = $composer_data['name'];
 
@@ -104,10 +112,10 @@ class CLIApplication extends Application
         }
 
         // Check if this looks like a WPMoo-based plugin by looking for WPMoo usage.
-        $php_files = glob($current_working_directory . '/*.php');
+        $php_files = $this->filesystem->glob($current_working_directory . '/*.php');
         if ($php_files) {
             foreach ($php_files as $file) {
-                $content = file_get_contents($file);
+                $content = $this->filesystem->get_contents($file);
                 // Look for WPMoo in plugin header or usage.
                 if (
                     preg_match('/(wpmoo|WPMoo)/i', $content) &&
@@ -222,8 +230,8 @@ class CLIApplication extends Application
     {
         $composer_file = dirname(__DIR__, 3) . '/composer.json';
 
-        if (file_exists($composer_file)) {
-            $composer_data = json_decode(file_get_contents($composer_file), true);
+        if ($this->filesystem->exists($composer_file)) {
+            $composer_data = json_decode($this->filesystem->get_contents($composer_file), true);
             if (isset($composer_data['version'])) {
                 return $composer_data['version'];
             }
