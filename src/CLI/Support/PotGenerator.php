@@ -4,6 +4,7 @@ namespace WPMoo\CLI\Support;
 
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * POT file generator service.
@@ -34,6 +35,20 @@ class PotGenerator
             $wp_bin = 'wp';
         }
 
+        // Read custom headers from wpmoo-config.yml
+        $headers = [];
+        $config_file = $this->projectRoot . '/wpmoo-config.yml';
+        if (file_exists($config_file)) {
+            $config = Yaml::parseFile($config_file);
+            if (isset($config['localization'])) {
+                $headers = [
+                    'Language-Team' => $config['localization']['team'] ?? 'WPMoo Team <hello@wpmoo.org>',
+                    'Last-Translator' => $config['localization']['translator'] ?? 'WPMoo <hello@wpmoo.org>',
+                    'Report-Msgid-Bugs-To' => $config['localization']['bug_reports'] ?? 'https://github.com/wpmoo/wpmoo/issues',
+                ];
+            }
+        }
+
         if ($project['type'] === 'wpmoo-framework') {
             $this->run_make_pot(
                 $wp_bin,
@@ -41,6 +56,7 @@ class PotGenerator
                 $this->projectRoot . '/languages/wpmoo.pot',
                 'wpmoo',
                 'vendor,node_modules',
+                $headers,
                 $outputCallback
             );
 
@@ -50,6 +66,7 @@ class PotGenerator
                 $this->projectRoot . '/languages/wpmoo-samples.pot',
                 'wpmoo-samples',
                 '',
+                $headers,
                 $outputCallback
             );
         } else {
@@ -66,6 +83,7 @@ class PotGenerator
                 $pot_file,
                 $domain,
                 'vendor,node_modules,dist,tests',
+                $headers,
                 $outputCallback
             );
         }
@@ -76,7 +94,7 @@ class PotGenerator
     /**
      * Run the wp i18n make-pot command.
      */
-    private function run_make_pot(string $wp_bin, string $source, string $dest, string $domain, string $exclude, ?callable $callback): void
+    private function run_make_pot(string $wp_bin, string $source, string $dest, string $domain, string $exclude, array $headers, ?callable $callback): void
     {
         if ($callback) {
             $callback('info', "> Generating {$domain}.pot from " . basename($source) . "...");
@@ -91,6 +109,10 @@ class PotGenerator
 
         if (!empty($exclude)) {
             $command[] = "--exclude={$exclude}";
+        }
+
+        if (!empty($headers)) {
+            $command[] = '--headers=' . json_encode($headers);
         }
 
         $process = new Process($command);
