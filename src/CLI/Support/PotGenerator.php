@@ -103,7 +103,9 @@ class PotGenerator
                 }
 
                 if (! $should_skip) {
-                    $translations->addFromPhpCodeFile($file_path, $options);
+                    // Use the extractor directly to ensure options are passed correctly.
+                    $extractor = new PhpCode();
+                    $extractor->fromFile($file_path, $translations, $options);
                 }
             }
         }
