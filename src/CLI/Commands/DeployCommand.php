@@ -96,8 +96,7 @@ class DeployCommand extends BaseCommand
         // 3. Generate POT files.
         $output->writeln('> Generating POT files...');
 
-        $cli_root = dirname(__DIR__, 3);
-        $pot_generator = new PotGenerator($this->get_cwd(), $cli_root);
+        $pot_generator = new PotGenerator($this->config_manager);
         $pot_generator->generate($project, function ($type, $message) use ($output) {
             $output->writeln($message);
         });
