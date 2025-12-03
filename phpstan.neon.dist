@@ -11,3 +11,4 @@ parameters:
     treatPhpDocTypesAsCertain: false
     bootstrapFiles:
     - vendor/autoload.php
+    - stubs/phpstan-bootstrap.php

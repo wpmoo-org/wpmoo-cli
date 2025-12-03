@@ -65,7 +65,7 @@ class UpdateCommand extends BaseCommand
 
         // 2. Update translations
         $symfony_io->writeln('> Generating .pot file...');
-        if ($this->run_pot_generation($output)) {
+        if ($this->run_pot_generation($input, $output)) {
             $symfony_io->success('Translations updated successfully.');
         } else {
             $symfony_io->error('Translation generation failed.');
@@ -113,19 +113,23 @@ class UpdateCommand extends BaseCommand
      * @param OutputInterface $output The output interface.
      * @return bool True on success, false on failure.
      */
-    private function run_pot_generation(OutputInterface $output): bool
+    private function run_pot_generation(InputInterface $input, OutputInterface $output): bool
     {
         try {
             // Using the PotGenerator class from the CLI support
-            $pot_generator = new \WPMoo\CLI\Support\PotGenerator();
-            $source_path = $this->get_cwd() . '/src';
-            $output_path = $this->get_cwd() . '/languages/wpmoo.pot';
-            $exclude = [ 'samples', 'vendor', 'node_modules' ];
+            $project_info = $this->identify_project();
+            $pot_generator = new \WPMoo\CLI\Support\PotGenerator($project_info['root_path']);
+            $symfony_io = new SymfonyStyle($input, $output);
 
-            // The method generate has been renamed to generate_pot_file.
-            $result = $pot_generator->generate_pot_file($source_path, $output_path, $exclude);
+            $output_callback = function (string $type, string $message) use ($symfony_io) {
+                if ($type === 'info') {
+                    $symfony_io->writeln($message);
+                } else {
+                    $symfony_io->writeln("<{$type}>{$message}</{$type}>");
+                }
+            };
 
-            return $result;
+            return $pot_generator->generate($project_info, $output_callback);
         } catch (\Exception $e) {
             $output->writeln('<error>' . $e->getMessage() . '</error>');
             return false;
