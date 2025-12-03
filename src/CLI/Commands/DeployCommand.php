@@ -62,18 +62,18 @@ class DeployCommand extends BaseCommand
 
         $output->writeln('<info>Preparing for deployment...</info>');
 
-        $versionManager = new VersionManager($this);
+        $version_manager = new VersionManager($this);
 
         // 1. Get new version.
-        $current_version = $versionManager->get_current_version($project);
+        $current_version = $version_manager->get_current_version($project);
         $output->writeln("<comment>Current version: {$current_version}</comment>");
-        $new_version = $versionManager->interactive_version_selection($input, $output, $current_version);
+        $new_version = $version_manager->interactive_version_selection($input, $output, $current_version);
 
         if (empty($new_version)) {
             $output->writeln('<comment>Operation cancelled.</comment>');
             return self::SUCCESS;
         }
-        if (! $versionManager->is_valid_version($new_version)) {
+        if (! $version_manager->is_valid_version($new_version)) {
             $output->writeln("<error>Invalid version format: {$new_version}</error>");
             return self::FAILURE;
         }
@@ -96,9 +96,9 @@ class DeployCommand extends BaseCommand
         // 3. Generate POT files.
         $output->writeln('> Generating POT files...');
 
-        $cliRoot = dirname(__DIR__, 3);
-        $potGenerator = new PotGenerator($this->get_cwd(), $cliRoot);
-        $potGenerator->generate($project, function ($type, $message) use ($output) {
+        $cli_root = dirname(__DIR__, 3);
+        $pot_generator = new PotGenerator($this->get_cwd(), $cli_root);
+        $pot_generator->generate($project, function ($type, $message) use ($output) {
             $output->writeln($message);
         });
 
@@ -110,7 +110,7 @@ class DeployCommand extends BaseCommand
 
         // 5. Update version numbers.
         $output->writeln("> Bumping version to {$new_version}...");
-        $versionManager->update_version($project, $new_version, $output);
+        $version_manager->update_version($project, $new_version, $output);
 
         // 6. Commit all changes.
         $output->writeln('> Committing all changes...');
@@ -137,44 +137,44 @@ class DeployCommand extends BaseCommand
             $output->writeln('> Including WPMoo framework separately for WPMoo-based plugin...');
 
             // Create the wpmoo-core directory in the build
-            $wpmooCorePath = $build_path . '/wpmoo-core';
-            $this->run_process([ 'mkdir', '-p', $wpmooCorePath ], $output);
+            $wpmoo_core_path = $build_path . '/wpmoo-core';
+            $this->run_process([ 'mkdir', '-p', $wpmoo_core_path ], $output);
 
             // Copy the WPMoo framework to the separate directory
-            $sourceWpMooPath = $this->get_cwd() . '/vendor/wpmoo/wpmoo';
-            if (is_dir($sourceWpMooPath)) {
+            $source_wpmoo_path = $this->get_cwd() . '/vendor/wpmoo/wpmoo';
+            if (is_dir($source_wpmoo_path)) {
                 // Copy only the src and necessary files from the WPMoo framework
-                $srcPath = $sourceWpMooPath . '/src';
-                if (is_dir($srcPath)) {
-                    $this->run_process([ 'cp', '-r', $srcPath, $wpmooCorePath . '/' ], $output);
+                $src_path = $source_wpmoo_path . '/src';
+                if (is_dir($src_path)) {
+                    $this->run_process([ 'cp', '-r', $src_path, $wpmoo_core_path . '/' ], $output);
                 }
 
-                $licensePath = $sourceWpMooPath . '/LICENSE';
-                if (file_exists($licensePath)) {
-                    $this->run_process([ 'cp', $licensePath, $wpmooCorePath . '/' ], $output);
+                $license_path = $source_wpmoo_path . '/LICENSE';
+                if (file_exists($license_path)) {
+                    $this->run_process([ 'cp', $license_path, $wpmoo_core_path . '/' ], $output);
                 }
 
-                $mainFrameworkFile = $sourceWpMooPath . '/wpmoo.php';
-                if (file_exists($mainFrameworkFile)) {
-                    $this->run_process([ 'cp', $mainFrameworkFile, $wpmooCorePath . '/' ], $output);
+                $main_framework_file = $source_wpmoo_path . '/wpmoo.php';
+                if (file_exists($main_framework_file)) {
+                    $this->run_process([ 'cp', $main_framework_file, $wpmoo_core_path . '/' ], $output);
                 }
             }
 
             // For the plugin itself, we only need its own autoloader dependencies (not framework ones)
             // We'll create a minimal vendor directory with only truly necessary dependencies
-            $vendorPath = $build_path . '/vendor';
-            $this->run_process([ 'mkdir', '-p', $vendorPath ], $output);
+            $vendor_path = $build_path . '/vendor';
+            $this->run_process([ 'mkdir', '-p', $vendor_path ], $output);
 
             // Copy only the autoloader files that the plugin itself needs
-            $sourceAutoloadPath = $this->get_cwd() . '/vendor/autoload.php';
-            if (file_exists($sourceAutoloadPath)) {
-                $this->run_process([ 'cp', $sourceAutoloadPath, $vendorPath . '/' ], $output);
+            $source_autoload_path = $this->get_cwd() . '/vendor/autoload.php';
+            if (file_exists($source_autoload_path)) {
+                $this->run_process([ 'cp', $source_autoload_path, $vendor_path . '/' ], $output);
             }
 
             // Copy the composer directory with autoloader files
-            $sourceComposerPath = $this->get_cwd() . '/vendor/composer';
-            if (is_dir($sourceComposerPath)) {
-                $this->run_process([ 'cp', '-r', $sourceComposerPath, $vendorPath . '/' ], $output);
+            $source_composer_path = $this->get_cwd() . '/vendor/composer';
+            if (is_dir($source_composer_path)) {
+                $this->run_process([ 'cp', '-r', $source_composer_path, $vendor_path . '/' ], $output);
             }
         }
 
@@ -195,8 +195,8 @@ class DeployCommand extends BaseCommand
                 $output->writeln('<comment>DRY RUN: Skipping SVN trunk commit.</comment>');
                 $this->run_process([ 'svn', 'status' ], $output, false, $this->svn_path);
             } else {
-                $commitQuestion = new ConfirmationQuestion('<question>Commit changes to SVN trunk? (y/N)</question> ', false);
-                if ($this->getHelper('question')->ask($input, $output, $commitQuestion)) {
+                $commit_question = new ConfirmationQuestion('<question>Commit changes to SVN trunk? (y/N)</question> ', false);
+                if ($this->getHelper('question')->ask($input, $output, $commit_question)) {
                     $this->run_process([ 'svn', 'commit', '-m', "Release version {$new_version}" ], $output, false, $this->svn_path);
                 }
             }

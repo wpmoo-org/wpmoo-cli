@@ -946,10 +946,10 @@ class RenameCommand extends BaseCommand
 
         // Check for wpmoo framework project.
         $wpmoo_src_path = $cwd . '/src/wpmoo.php';
-        $isWPMooFramework = file_exists($wpmoo_src_path) &&
+        $is_wpmoo_framework = file_exists($wpmoo_src_path) &&
             strpos(file_get_contents($wpmoo_src_path), 'WPMoo Framework') !== false;
 
-        if ($isWPMooFramework) {
+        if ($is_wpmoo_framework) {
             return [
                 'found' => true,
                 'type' => 'wpmoo-framework',
