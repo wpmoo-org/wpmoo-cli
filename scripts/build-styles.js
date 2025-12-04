@@ -20,7 +20,7 @@ for (const p of potentialSassPaths) {
       sass = require(p);
       break;
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 if (!sass) {
@@ -31,8 +31,8 @@ if (!sass) {
 
 // 3. Configuration
 const themeColors = [
-  "amber", "azure", "blue", "cyan", "fuchsia", "green", "grey", "indigo", 
-  "jade", "lime", "orange", "pink", "pumpkin", "purple", "red", "sand", 
+  "amber", "azure", "blue", "cyan", "fuchsia", "green", "grey", "indigo",
+  "jade", "lime", "orange", "pink", "pumpkin", "purple", "red", "sand",
   "slate", "violet", "yellow", "zinc",
 ];
 
@@ -74,14 +74,14 @@ const clearLine = () => {
   }
 };
 
-console.log(`[WPMoo] Building themes...`);
+console.log(`[WPMoo] Building styles...`);
 
 const year = new Date().getFullYear();
 const currentYear = new Date().getFullYear();
 const picoCopyrightYear = (currentYear > 2019) ? `2019-${currentYear}` : '2019'; // Assuming Pico started in 2019
 
-const banner = 
-`/*!
+const banner =
+  `/*!
  * WPMoo Framework Scoped Base
  * Pico CSS ✨ v2.1.1 (https://picocss.com)
  * Copyright 2019-2025 - Licensed under MIT
@@ -92,7 +92,7 @@ themeColors.forEach((themeColor, colorIndex) => {
   const versions = [
     {
       name: "wpmoo",
-      content: 
+      content:
         '@use "../resources/scss/config/settings" with (\n' +
         '  $theme-color: "' + themeColor + '"\n' +
         ');\n' +
@@ -117,7 +117,7 @@ themeColors.forEach((themeColor, colorIndex) => {
   versions.forEach((version) => {
     const fileName = `${version.name}.${themeColor}`;
     const tempFile = path.join(paths.temp, `${fileName}.scss`);
-    
+
     fs.writeFileSync(tempFile, version.content);
 
     try {
@@ -181,4 +181,4 @@ emptyFolder(paths.temp);
 fs.rmdirSync(paths.temp);
 
 clearLine();
-console.log("[WPMoo] Themes built successfully! 🎨");
+console.log("[WPMoo] Styles built successfully! 🎨");
