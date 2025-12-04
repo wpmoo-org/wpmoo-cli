@@ -23,9 +23,10 @@ class BuildCommand extends BaseCommand
      */
     protected function configure()
     {
-        $this->setName('build')
+        $this->setName('build:all')
             ->setDescription('Build all project assets')
-            ->setHelp('This command runs all build tasks (Themes, Scripts, etc.) sequentially.');
+            ->setHelp('This command runs all build tasks (Themes, Scripts, etc.) sequentially.')
+            ->setAliases(['build']);
     }
 
     /**
@@ -46,16 +47,16 @@ class BuildCommand extends BaseCommand
             return 1;
         }
 
-        // 1. Run Themes Build
-        $io->section('Building Themes...');
-        $command = $application->find('build:themes');
+        // 1. Run Styles Build
+        $io->section('Building Styles...');
+        $command = $application->find('build:styles');
 
         // We pass the same arguments/options if needed, or an empty array
-        $themesInput = new ArrayInput([]);
-        $returnCode = $command->run($themesInput, $output);
+        $stylesInput = new ArrayInput([]);
+        $returnCode = $command->run($stylesInput, $output);
 
         if ($returnCode !== 0) {
-            $io->error('Theme build failed. Aborting full build.');
+            $io->error('Style build failed. Aborting full build.');
             return $returnCode;
         }
 

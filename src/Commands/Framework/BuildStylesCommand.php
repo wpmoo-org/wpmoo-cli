@@ -17,16 +17,16 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
  * @package WPMoo\CLI\Commands
  * @since 0.1.0
  */
-class BuildThemesCommand extends BaseCommand
+class BuildStylesCommand extends BaseCommand
 {
     /**
      * Configure the command.
      */
     protected function configure()
     {
-        $this->setName('build:themes')
-            ->setDescription('Compile WPMoo themes (SCSS to CSS)')
-            ->setHelp('This command compiles the WPMoo SCSS themes into CSS assets using the bundled Node.js script.');
+        $this->setName('build:styles')
+            ->setDescription('Compile WPMoo styles (SCSS to CSS)')
+            ->setHelp('This command compiles the WPMoo SCSS styles into CSS assets using the bundled Node.js script.');
     }
 
     /**
@@ -39,21 +39,21 @@ class BuildThemesCommand extends BaseCommand
     public function handle_execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $io->title('WPMoo Theme Builder');
+        $io->title('WPMoo Style Builder');
 
         // 1. Check for Node.js
         $process = new Process(['node', '-v']);
         $process->run();
 
         if (!$process->isSuccessful()) {
-            $io->error('Node.js is required to build themes but was not found in your PATH.');
+            $io->error('Node.js is required to build styles but was not found in your PATH.');
             return 1;
         }
 
         // 2. Locate the build script
         // We assume we are running from src/CLI/Commands
         // Script is in scripts/build-themes.js (relative to project root)
-        $script_path = dirname(__DIR__, 3) . '/scripts/build-themes.js';
+        $script_path = dirname(__DIR__, 3) . '/scripts/build-styles.js';
 
         if (!file_exists($script_path)) {
             $io->error("Build script not found at: {$script_path}");
@@ -86,11 +86,11 @@ class BuildThemesCommand extends BaseCommand
         });
 
         if (!$process->isSuccessful()) {
-            $io->error('Theme build failed.');
+            $io->error('Style build failed.');
             return 1;
         }
 
-        $io->success('Theme build process completed.');
+        $io->success('Style build process completed.');
         return 0;
     }
 }
