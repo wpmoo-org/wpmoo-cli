@@ -50,17 +50,25 @@ class DevCommand extends BaseCommand
         $cli_root = dirname(__DIR__, 3);
 
         $io->writeln(sprintf('<info>Starting dev server for project:</info> %s', $project_root));
+        $io->note('Initial build in progress...');
 
-        // Initial Build
-        $io->section('Performing initial build...');
-        $build_process = new Process(['node', $cli_root . '/scripts/build-styles.js', $project_root]);
-        $build_process->run(function ($type, $buffer) use ($output) {
-            $output->write($buffer);
-        });
-        $build_process = new Process(['node', $cli_root . '/scripts/build-scripts.js', $project_root]);
-        $build_process->run(function ($type, $buffer) use ($output) {
-            $output->write($buffer);
-        });
+        // Initial Build (silently)
+        $build_styles_process = new Process(['node', $cli_root . '/scripts/build-styles.js'], null, ['TARGET_DIR' => $project_root]);
+        $build_styles_process->run();
+        if (!$build_styles_process->isSuccessful()) {
+            $io->error('Initial style build failed.');
+            $io->writeln($build_styles_process->getErrorOutput());
+            return self::FAILURE;
+        }
+
+        $build_scripts_process = new Process(['node', $cli_root . '/scripts/build-scripts.js'], null, ['TARGET_DIR' => $project_root]);
+        $build_scripts_process->run();
+        if (!$build_scripts_process->isSuccessful()) {
+            $io->error('Initial script build failed.');
+            $io->writeln($build_scripts_process->getErrorOutput());
+            return self::FAILURE;
+        }
+
         $io->success('Initial build completed.');
 
         // Concurrently command setup
@@ -73,7 +81,7 @@ class DevCommand extends BaseCommand
         $build_scripts_script = $cli_root . '/scripts/build-scripts.js';
 
         $watch_styles = sprintf(
-            "%s '%s/resources/scss/**/*.scss' --command 'node %s %s'",
+            "%s --quiet '%s/resources/scss/**/*.scss' --command 'node %s %s'",
             $chokidar_path,
             $project_root,
             $build_styles_script,
@@ -81,42 +89,27 @@ class DevCommand extends BaseCommand
         );
 
         $watch_js = sprintf(
-            "%s '%s/resources/js/**/*.js' --command 'node %s %s'",
+            "%s --quiet '%s/resources/js/**/*.js' --command 'node %s %s'",
             $chokidar_path,
             $project_root,
             $build_scripts_script,
             $project_root
         );
 
-        $watch_php = sprintf(
-            "%s '%s/**/*.php' '%s/index.html' --ignore '%s/node_modules/**' --ignore '%s/vendor/**' --ignore '%s/.git/**' --command 'node -e \"console.log(\\\"[PHP] Reloading...\\\")\" && %s reload'",
-            $chokidar_path,
-            $project_root,
-            $project_root,
-            $project_root,
-            $project_root,
-            $project_root,
-            $browser_sync_path
-        );
-
         $browser_sync_config = $this->getBrowserSyncConfig($project_root);
         $serve_command = sprintf(
-            "%s start %s",
+            "%s start --silent %s",
             $browser_sync_path,
             $this->buildBrowserSyncArgs($browser_sync_config)
         );
 
-        $concurrently_command = sprintf(
-            '%s --kill-others --prefix "[{name}]" --names "Styles,Scripts,PHP,Sync" -c "bgBlue.bold,bgGreen.bold,bgYellow.bold,bgMagenta.bold" %s %s %s %s',
-            $concurrently_path,
-            escapeshellarg($watch_styles),
-            escapeshellarg($watch_js),
-            escapeshellarg($watch_php),
-            escapeshellarg($serve_command)
-        );
-
-        $io->writeln(sprintf('<comment>Running: %s</comment>', $concurrently_command));
-
+                $concurrently_command = sprintf(
+                    '%s --raw --kill-others "%s" "%s" "%s"',
+                    $concurrently_path,
+                    $watch_styles,
+                    $watch_js,
+                    $serve_command
+                );
         $process = Process::fromShellCommandline($concurrently_command, $project_root);
         $process->setTimeout(null)->setIdleTimeout(null)->setTty(Process::isTtySupported());
 
@@ -126,7 +119,6 @@ class DevCommand extends BaseCommand
 
         return $process->isSuccessful() ? self::SUCCESS : self::FAILURE;
     }
-
             /**
              * Gets BrowserSync configuration based on gulpfile.js logic.
              * @return array
@@ -135,7 +127,7 @@ class DevCommand extends BaseCommand
     {
         $bsConfig = [
             'proxy' => 'https://wp-dev.local',
-            'startPath' => '/wp-admin/admin.php?page=wpmoo-samples',
+            'startPath' => '/wp-admin/admin.php?page=wpmoo-settings',
             'https' => true,
             'open' => 'https://wp-dev.local',
             'notify' => false,
@@ -183,7 +175,7 @@ class DevCommand extends BaseCommand
             $args[] = '--no-notify';
         }
 
-        $files_to_watch = ['assets/css/*.css', 'assets/js/*.js'];
+        $files_to_watch = ['assets/css/*.css', 'assets/js/*.js', '**/*.php'];
         $args[] = sprintf('--files "%s"', implode(',', $files_to_watch));
 
         return implode(' ', $args);

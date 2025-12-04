@@ -6,7 +6,11 @@
   "scripts": {
     "build:styles": "node scripts/build-styles.js",
     "build:scripts": "node scripts/build-scripts.js",
-    "build": "npm run build:styles && npm run build:scripts"
+    "build": "npm run build:styles && npm run build:scripts",
+    "watch:styles": "chokidar \"$TARGET_DIR/resources/scss/**/*.scss\" -c \"npm run build:styles\"",
+    "watch:js": "chokidar \"$TARGET_DIR/resources/js/**/*.js\" -c \"npm run build:scripts\"",
+    "serve": "browser-sync start --proxy 'https://wp-dev.local' --https --startPath '/wp-admin' --no-notify --files \"$TARGET_DIR/assets/css/*.css\" \"$TARGET_DIR/assets/js/*.js\" \"$TARGET_DIR/**/*.php\" --ignore \"node_modules\" --ignore \"vendor\"",
+    "dev": "concurrently --kill-others --prefix '[{name}]' --names 'Styles,Scripts,Sync' -c 'bgBlue.bold,bgGreen.bold,bgMagenta.bold' \"npm:watch:*\" \"npm:serve\""
   },
   "devDependencies": {
     "sass": "^1.77.8",

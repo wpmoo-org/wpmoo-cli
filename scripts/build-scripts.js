@@ -4,7 +4,10 @@ const fs = require("fs");
 // 1. Determine the Project Root (Target)
 const targetDir = process.env.TARGET_DIR ? path.resolve(process.env.TARGET_DIR) : process.cwd();
 
-console.log(`[WPMoo] Target Directory: ${targetDir}`);
+// Only log the target directory once if run directly with output
+if (process.env.npm_config_loglevel !== 'silent') {
+    console.log(`[WPMoo] Building scripts for: ${targetDir}`);
+}
 
 const paths = {
   src: path.join(targetDir, "resources/js"),
@@ -31,29 +34,24 @@ const banner =
  */
 `;
 
-console.log(`[WPMoo] Building scripts...`);
-
 if (!fs.existsSync(paths.entry)) {
-  console.error(`❌ Error: Entry file not found at ${paths.entry}`);
-  process.exit(1);
+    // Silently exit if no entry file, project may not have scripts.
+    process.exit(0);
 }
 
 createFolderIfNotExists(paths.dest);
 
 try {
-  // 1. Read Entry File
   let content = fs.readFileSync(paths.entry, "utf8");
 
-  // 2. Read Modules
   let modulesCode = "";
   if (fs.existsSync(paths.modules)) {
     const files = fs
       .readdirSync(paths.modules)
       .filter((filename) => filename.endsWith(".js"))
-      .sort(); // Sort to ensure deterministic order
+      .sort();
 
     if (files.length > 0) {
-      console.log(`[WPMoo] Found ${files.length} modules to inject.`);
       modulesCode = files
         .map((filename) => {
           const modPath = path.join(paths.modules, filename);
@@ -63,24 +61,17 @@ try {
     }
   }
 
-  // 3. Inject Modules
   if (content.includes(MODULE_PLACEHOLDER)) {
     content = content.replace(MODULE_PLACEHOLDER, modulesCode);
   } else {
-    // Append if placeholder missing (fallback)
     content = modulesCode + "\n" + content;
   }
 
-  // 4. Add Banner
   const finalContent = banner + "\n" + content;
 
-  // 5. Write Output
   const outFile = path.join(paths.dest, "wpmoo.js");
   fs.writeFileSync(outFile, finalContent);
   
-  console.log(`[WPMoo] Scripts built successfully! 📜`);
-  console.log(`[WPMoo] Output: ${outFile}`);
-
 } catch (error) {
   console.error(`❌ Error building scripts:`, error.message);
   process.exit(1);
