@@ -25,6 +25,7 @@
     "symfony/yaml": "^5.4",
     "symfony/filesystem": "^5.4",
     "symfony/process": "^5.4",
+    "symfony/finder": "^5.4",
     "gettext/gettext": "^4.8",
     "wp-cli/i18n-command": "^2.1"
   },

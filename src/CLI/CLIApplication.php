@@ -17,6 +17,7 @@ use WPMoo\CLI\Commands\BuildScriptsCommand;
 use WPMoo\CLI\Commands\BuildCommand;
 use WPMoo\CLI\Support\Banner;
 use WPMoo\CLI\Support\Filesystem;
+use Symfony\Component\Finder\Finder;
 
 /**
  * WPMoo CLI Application.
@@ -59,86 +60,95 @@ class CLIApplication extends Application
         $context = $this->identify_project_context();
 
         // Always register essential commands.
-        $commands = array(
-            new InfoCommand(),
-        );
+        $this->add(new InfoCommand());
+
+        $commands_directory = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Commands';
+        $commands_namespace = 'WPMoo\\CLI\\Commands\\';
 
         // Add commands based on context.
         switch ($context) {
             case 'wpmoo-cli':
-                // Only Info and List commands are active in wpmoo-cli.
-                // List command is added by default by Symfony Console.
+                // No additional commands for wpmoo-cli beyond essential and default ListCommand.
                 break;
             case 'wpmoo-framework':
-                // In wpmoo framework, add deploy commands.
-                $commands[] = new DeployCommand();
-                $commands[] = new BuildThemesCommand();
-                $commands[] = new BuildScriptsCommand();
-                $commands[] = new BuildCommand();
+                // Commands specific to the wpmoo framework.
+                // Assuming all framework-specific commands are in the main Commands directory
+                // or a dedicated subdirectory, we can register them.
+                $this->find_and_register_commands_in_directory($commands_directory, $commands_namespace);
                 break;
             case 'wpmoo-plugin':
-            default:
-                // For starter or other WPMoo-based plugins, add all commands.
-                $commands[] = new DeployCommand();
-                $commands[] = new RenameCommand();
-                $commands[] = new UpdateCommand();
-                $commands[] = new BuildThemesCommand();
-                $commands[] = new BuildScriptsCommand();
-                $commands[] = new BuildCommand();
+            case 'wpmoo-theme':
+                // For WPMoo-based plugins and themes, register all commands.
+                $this->find_and_register_commands_in_directory($commands_directory, $commands_namespace);
                 break;
-        }
-
-        foreach ($commands as $command) {
-            $this->add($command);
+            case 'unknown':
+            default:
+                // For unknown contexts, only essential commands are registered (InfoCommand is already there).
+                // No additional commands are registered here to avoid unexpected behavior.
+                break;
         }
     }
 
     /**
      * Identify the project context based on current directory and composer.json.
      *
-     * @return string Context: 'wpmoo-cli', 'wpmoo', or 'wpmoo-plugin'
+     * @return string Context: 'wpmoo-cli', 'wpmoo-framework', 'wpmoo-plugin', 'wpmoo-theme' or 'unknown'.
      */
     private function identify_project_context(): string
     {
         $current_working_directory = getcwd();
         if (! $current_working_directory) {
-            return 'wpmoo-plugin'; // Default to plugin behavior.
+            return 'unknown';
         }
 
-        $composer_file = $current_working_directory . '/composer.json';
+        $composer_file_path = $this->find_composer_json_upwards($current_working_directory);
 
-        if ($this->file_system->file_exists($composer_file)) {
-            $composer_data = json_decode($this->file_system->get_file_contents($composer_file), true);
+        if ($composer_file_path) {
+            $composer_data = json_decode($this->file_system->get_file_contents($composer_file_path), true);
+
             if (isset($composer_data['name'])) {
                 $package_name = $composer_data['name'];
-
                 if ($package_name === 'wpmoo/wpmoo-cli') {
                     return 'wpmoo-cli';
                 } elseif ($package_name === 'wpmoo/wpmoo') {
                     return 'wpmoo-framework';
                 }
             }
+
+            // Check composer type for more reliable plugin/theme detection.
+            if (isset($composer_data['type'])) {
+                if ($composer_data['type'] === 'wordpress-plugin') {
+                    return 'wpmoo-plugin';
+                } elseif ($composer_data['type'] === 'wordpress-theme') {
+                    return 'wpmoo-theme';
+                }
+            }
+
+            // If a project has wpmoo as a requirement, it's likely a wpmoo-plugin
+            if (isset($composer_data['require']['wpmoo/wpmoo'])) {
+                return 'wpmoo-plugin';
+            }
         }
 
-        // Check if this looks like a WPMoo-based plugin by looking for WPMoo usage.
-        $php_files = $this->file_system->glob($current_working_directory . '/*.php');
+        // Fallback: Scan PHP files for WPMoo usage and WordPress plugin/theme headers.
+        // This is less reliable but can catch projects not using Composer types.
+        $php_files = $this->file_system->glob($current_working_directory . '/**/*.php'); // Recursive glob
+
         if ($php_files) {
             foreach ($php_files as $file) {
                 $content = $this->file_system->get_file_contents($file);
-                // Look for WPMoo in plugin header or usage.
                 if (
                     preg_match('/(wpmoo|WPMoo)/i', $content) &&
                     ( preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
-                    preg_match('/^[ \t\/*#@]*Theme Name:/im', $content) )
+                        preg_match('/^[ \t\/*#@]*Theme Name:/im', $content) )
                 ) {
                     return 'wpmoo-plugin';
                 }
             }
         }
 
-
-        // Default to plugin behavior if we can't clearly determine.
-        return 'wpmoo-plugin';
+        // Default to unknown if no clear context is found.
+        return 'unknown';
     }
 
     public function getHelp(): string
@@ -248,5 +258,65 @@ class CLIApplication extends Application
 
         // Default fallback version.
         return 'dev-main';
+    }
+
+    /**
+     * Search for composer.json in the current directory or its parents.
+     *
+     * @param string $path Starting path for the search.
+     * @return string|null Full path to composer.json if found, otherwise null.
+     */
+    private function find_composer_json_upwards(string $path): ?string
+    {
+        $current_path = rtrim($path, DIRECTORY_SEPARATOR);
+
+        while ($current_path !== dirname($current_path)) {
+            $composer_file = $current_path . DIRECTORY_SEPARATOR . 'composer.json';
+            if ($this->file_system->file_exists($composer_file)) {
+                return $composer_file;
+            }
+            $current_path = dirname($current_path);
+        }
+
+        return null;
+    }
+
+    /**
+     * Recursively finds and registers command classes from a given directory.
+     *
+     * @param string $directory The directory to scan for commands.
+     * @param string $namespace The base namespace for the commands in the directory.
+     */
+    private function find_and_register_commands_in_directory(string $directory, string $namespace): void
+    {
+        if (!is_dir($directory)) {
+            return;
+        }
+
+        $finder = new Finder();
+        $finder->files()->in($directory)->name('*.php');
+
+        foreach ($finder as $file) {
+            // Convert file path to class name
+            // Example: /path/to/src/CLI/Commands/InfoCommand.php -> WPMoo\CLI\Commands\InfoCommand
+            $class = $namespace . str_replace(
+                [
+                    realpath($directory) . DIRECTORY_SEPARATOR,
+                    '.php',
+                    '/'
+                ],
+                [
+                    '',
+                    '',
+                    '\\'
+                ],
+                $file->getRealPath()
+            );
+
+            // Ensure the class exists and extends Symfony's Command class
+            if (class_exists($class) && is_subclass_of($class, \Symfony\Component\Console\Command\Command::class)) {
+                $this->add(new $class());
+            }
+        }
     }
 }
