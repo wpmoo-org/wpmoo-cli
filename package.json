@@ -7,10 +7,11 @@
     "build:styles": "node scripts/build-styles.js",
     "build:scripts": "node scripts/build-scripts.js",
     "build": "npm run build:styles && npm run build:scripts",
-    "watch:styles": "chokidar \"$TARGET_DIR/resources/scss/**/*.scss\" -c \"npm run build:styles\"",
-    "watch:js": "chokidar \"$TARGET_DIR/resources/js/**/*.js\" -c \"npm run build:scripts\"",
-    "serve": "browser-sync start --proxy 'https://wp-dev.local' --https --startPath '/wp-admin' --no-notify --files \"$TARGET_DIR/assets/css/*.css\" \"$TARGET_DIR/assets/js/*.js\" \"$TARGET_DIR/**/*.php\" --ignore \"node_modules\" --ignore \"vendor\"",
-    "dev": "concurrently --kill-others --prefix '[{name}]' --names 'Styles,Scripts,Sync' -c 'bgBlue.bold,bgGreen.bold,bgMagenta.bold' \"npm:watch:*\" \"npm:serve\""
+    "watch:styles": "chokidar 'resources/scss/**/*.scss' --quiet -c 'npm run build:styles'",
+    "watch:js": "chokidar 'resources/js/**/*.js' --quiet -c 'npm run build:scripts'",
+    "watch:php": "chokidar '**/*.php' 'index.html' --ignore 'node_modules/**' --ignore 'vendor/**' --ignore '.git/**'",
+    "serve": "browser-sync start --proxy 'https://wp-dev.local' --https --startPath '/wp-admin/admin.php?page=wpmoo-samples' --no-notify --files 'assets/css/*.css,assets/js/*.js,**/*.php'",
+    "dev": "concurrently --kill-others --raw 'npm:watch:styles' 'npm:watch:js' 'npm:watch:php' 'npm:serve'"
   },
   "devDependencies": {
     "sass": "^1.77.8",
