@@ -39,17 +39,18 @@
   },
   "autoload": {
     "psr-4": {
-      "WPMoo\\CLI\\": "src/CLI/"
+      "WPMoo\\CLI\\": "src/"
     }
   },
   "bin": [
     "bin/moo"
   ],
-      "require-dev": {
-          "wpmoo/wpmoo-coding-standards": "dev-main",
-          "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-          "phpstan/phpstan": "^1.11"
-      },  "config": {
+  "require-dev": {
+    "wpmoo/wpmoo-coding-standards": "dev-main",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "phpstan/phpstan": "^1.11"
+  },
+  "config": {
     "allow-plugins": {
       "dealerdirect/phpcodesniffer-composer-installer": true,
       "phpstan/extension-installer": true
