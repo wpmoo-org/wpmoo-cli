@@ -40,7 +40,10 @@
   "autoload": {
     "psr-4": {
       "WPMoo\\CLI\\": "src/"
-    }
+    },
+    "files": [
+      "src/Support/helpers.php"
+    ]
   },
   "bin": [
     "bin/moo"

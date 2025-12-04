@@ -1,0 +1,22 @@
+{
+  "name": "wpmoo-cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WPMoo CLI development tools",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "sass": "^1.77.8",
+    "clean-css-cli": "^5.6.3",
+    "browser-sync": "^3.0.2",
+    "concurrently": "^8.2.2",
+    "chokidar-cli": "^3.0.0",
+    "replace-in-file": "^7.1.2",
+    "open": "^10.1.0",
+    "prettier": "^3.3.3",
+    "stylelint": "^16.7.0",
+    "stylelint-config-standard-scss": "^13.1.0",
+    "@picocss/pico": "^2.1.1"
+  }
+}

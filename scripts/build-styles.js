@@ -1,5 +1,6 @@
 const path = require("path");
 const fs = require("fs");
+const { execSync } = require('child_process');
 
 // 1. Determine the Project Root (Target)
 const targetDir = process.argv[2] ? path.resolve(process.argv[2]) : process.cwd();
@@ -16,7 +17,8 @@ const potentialSassPaths = [
 
 for (const p of potentialSassPaths) {
   try {
-    if (fs.existsSync(p)) {
+    // Only require if it's a directory (i.e., a package)
+    if (fs.existsSync(p) && fs.statSync(p).isDirectory()) {
       sass = require(p);
       break;
     }
@@ -25,9 +27,18 @@ for (const p of potentialSassPaths) {
 
 if (!sass) {
   console.error("❌ Error: 'sass' module not found.");
-  console.error("Please run 'npm install' in your project directory or ensure 'wpmoo/wpmoo' has dependencies installed.");
+  console.error("Please run 'npm install' in wpmoo-cli directory or ensure 'sass' is installed.");
   process.exit(1);
 }
+
+// Find clean-css-cli (should be in wpmoo-cli's node_modules)
+const cleanCssCliPath = path.join(__dirname, "../node_modules/.bin/cleancss");
+if (!fs.existsSync(cleanCssCliPath)) {
+  console.error("❌ Error: 'cleancss' executable not found.");
+  console.error("Please run 'npm install' in wpmoo-cli directory.");
+  process.exit(1);
+}
+
 
 // 3. Configuration
 const themeColors = [
@@ -37,11 +48,12 @@ const themeColors = [
 ];
 
 const paths = {
-  temp: path.join(targetDir, ".pico-build-tmp"),
+  // We'll use targetDir for the project-specific paths
   css: path.join(targetDir, "assets/css"),
   scss: path.join(targetDir, "resources/scss"),
   node_modules: path.join(targetDir, "node_modules"),
-  monorepo_modules: path.join(__dirname, "../../wpmoo/node_modules"),
+  monorepo_modules: path.join(__dirname, "../../wpmoo/node_modules"), // For shared monorepo node_modules
+  picoScopedCss: path.join(__dirname, "../node_modules/@picocss/pico/css/pico.conditional.css"), // Pico CSS from wpmoo-cli's node_modules
 };
 
 const createFolderIfNotExists = (foldername) => {
@@ -50,22 +62,12 @@ const createFolderIfNotExists = (foldername) => {
   }
 };
 
-const emptyFolder = (foldername) => {
-  if (fs.existsSync(foldername)) {
-    fs.readdirSync(foldername).forEach((file) => {
-      fs.unlinkSync(path.join(foldername, file));
-    });
-  }
-};
-
 if (!fs.existsSync(paths.scss)) {
   console.error(`❌ Error: Resources directory not found at ${paths.scss}`);
   process.exit(1);
 }
 
-createFolderIfNotExists(paths.temp);
 createFolderIfNotExists(paths.css);
-emptyFolder(paths.temp);
 
 const clearLine = () => {
   if (process.stdout.isTTY) {
@@ -77,29 +79,28 @@ const clearLine = () => {
 console.log(`[WPMoo] Building styles...`);
 
 const year = new Date().getFullYear();
-const currentYear = new Date().getFullYear();
-const picoCopyrightYear = (currentYear > 2019) ? `2019-${currentYear}` : '2019'; // Assuming Pico started in 2019
-
 const banner =
   `/*!
- * WPMoo Framework Scoped Base
- * Pico CSS ✨ v2.1.1 (https://picocss.com)
- * Copyright 2019-2025 - Licensed under MIT
+ * WPMoo UI Scoped Base
+ * Copyright ${year} - Licensed under MIT
+ * Contains portions of Pico CSS (MIT). See LICENSE-PICO.md.
  */
 `;
 
-themeColors.forEach((themeColor, colorIndex) => {
-  const versions = [
-    {
-      name: "wpmoo",
-      content:
-        '@use "../resources/scss/config/settings" with (\n' +
-        '  $theme-color: "' + themeColor + '"\n' +
-        ');\n' +
-        '@use "../resources/scss/wpmoo";\n',
-    },
-  ];
+// 1. Get scoped Pico content first.
+let scopedPicoContent = "";
+try {
+  const picoContent = fs.readFileSync(paths.picoScopedCss, "utf8");
+  scopedPicoContent = picoContent
+    .replace(/\.pico/g, ".wpmoo")
+    .replace(/--pico-/g, "--wpmoo-");
+} catch (e) {
+  console.error(`❌ Error reading or scoping Pico CSS: ${e.message}`);
+  process.exit(1);
+}
 
+
+themeColors.forEach((themeColor, colorIndex) => {
   const displayAsciiProgress = ({ length, index, color }) => {
     if (!process.stdout.isTTY) return;
     const progress = Math.round(((index + 1) / length) * 100);
@@ -114,71 +115,68 @@ themeColors.forEach((themeColor, colorIndex) => {
     color: themeColor.charAt(0).toUpperCase() + themeColor.slice(1),
   });
 
-  versions.forEach((version) => {
-    const fileName = `${version.name}.${themeColor}`;
-    const tempFile = path.join(paths.temp, `${fileName}.scss`);
+  const scssEntryFile = path.join(paths.scss, "wpmoo.scss");
+  const outputFileName = `wpmoo.${themeColor}.css`;
+  const outputFilePath = path.join(paths.css, outputFileName);
+  const outputMinFilePath = path.join(paths.css, `wpmoo.${themeColor}.min.css`);
 
-    fs.writeFileSync(tempFile, version.content);
 
-    try {
-      // 1. Compile Expanded (Normal CSS)
-      const resultExpanded = sass.compile(tempFile, {
-        style: "expanded",
-        loadPaths: [
-          paths.node_modules,
-          paths.monorepo_modules,
-          paths.scss
-        ],
-        quietDeps: true
-      });
+  // Temporarily create a SCSS file that includes our themed settings
+  const tempScssContent =
+    `@use "resources/scss/config/settings" with (\n` +
+    `  $theme-color: "${themeColor}"\n` +
+    `);\n` +
+    `@use "resources/scss/wpmoo";\n`;
 
-      // Remove existing @charset, specific comments, and any existing banners from Sass output
-      let cssExpanded = resultExpanded.css;
-      cssExpanded = cssExpanded.replace(/^@charset "UTF-8";\s*/, "");
-      cssExpanded = cssExpanded.replace(/\/\* WP Moo SCSS customizations \*\/\s*/g, "");
-      cssExpanded = cssExpanded.replace(/\/\* Import Pico SCSS using variables from sibling modules \*\/\s*/g, "");
-      cssExpanded = cssExpanded.replace(/\/\* WPMoo CSS custom property defaults \(scoped\) \*\/\s*/g, "");
-      cssExpanded = cssExpanded.replace(/\/\*!([\s\S]*?)\*\/\s*/g, ""); // Remove any other existing banners (like Pico's own banner)
+  // Create a temporary SCSS file to compile
+  const tempScssPath = path.join(paths.scss, `_temp_wpmoo_build_${themeColor}.scss`);
+  fs.writeFileSync(tempScssPath, tempScssContent);
 
-      fs.writeFileSync(path.join(paths.css, `${fileName}.css`), banner + cssExpanded);
 
-      // 2. Compile Compressed (Minified CSS)
-      const resultCompressed = sass.compile(tempFile, {
-        style: "compressed",
-        loadPaths: [
-          paths.node_modules,
-          paths.monorepo_modules,
-          paths.scss
-        ],
-        quietDeps: true
-      });
+  try {
+    // 1. Compile SCSS
+    const result = sass.compile(tempScssPath, {
+      style: "expanded", // Always compile expanded first for consistency
+      loadPaths: [
+        paths.node_modules, // Project's node_modules
+        path.join(__dirname, "../node_modules"), // CLI's node_modules
+        paths.scss // Project's scss folder
+      ],
+      quietDeps: true
+    });
 
-      let cssCompressed = resultCompressed.css;
-      // Minified CSS usually strips all comments except /*! comments.
-      // We just ensure our banner is on top.
-      if (cssCompressed.startsWith('\uFEFF')) { // BOM check
-        cssCompressed = cssCompressed.slice(1);
-      }
-      if (cssCompressed.startsWith('@charset "UTF-8";')) {
-        cssCompressed = cssCompressed.replace('@charset "UTF-8";', "");
-      }
-      // Even in compressed, these might somehow appear or be part of content. Clean them.
-      cssCompressed = cssCompressed.replace(/\/\* WP Moo SCSS customizations \*\/\s*/g, "");
-      cssCompressed = cssCompressed.replace(/\/\* Import Pico SCSS using variables from sibling modules \*\/\s*/g, "");
-      cssCompressed = cssCompressed.replace(/\/\* WPMoo CSS custom property defaults \(scoped\) \*\/\s*/g, "");
-      cssCompressed = cssCompressed.replace(/\/\*!([\s\S]*?)\*\/\s*/g, ""); // Remove any other existing banners (like Pico's own banner)
+    let compiledCss = result.css.toString();
 
-      fs.writeFileSync(path.join(paths.css, `${fileName}.min.css`), banner + cssCompressed);
+    // Remove specific comments and @charset from Sass output
+    compiledCss = compiledCss.replace(/^@charset "UTF-8";\s*/, "");
+    compiledCss = compiledCss.replace(/\/\* WP Moo SCSS customizations \*\/\s*/g, "");
+    compiledCss = compiledCss.replace(/\/\* Import Pico SCSS using variables from sibling modules \*\/\s*/g, "");
+    compiledCss = compiledCss.replace(/\/\* WPMoo CSS custom property defaults \(scoped\) \*\/\s*/g, "");
+    // Remove any existing banners (like Pico's own banner) if present in the compiled CSS
+    compiledCss = compiledCss.replace(/\/\*![\s\S]*?\*\/(\s*)?/g, "");
 
-    } catch (error) {
-      clearLine();
-      console.error(`❌ Error compiling ${fileName}:`, error.message);
+    // Final CSS (Prepending scoped Pico and banner)
+    const finalCss = banner + scopedPicoContent + compiledCss;
+
+    // Write unminified CSS
+    fs.writeFileSync(outputFilePath, finalCss);
+
+    // Minify using clean-css-cli
+    const minifiedCss = execSync(`${cleanCssCliPath} --skip-rebase -O2`, { input: finalCss }).toString();
+    fs.writeFileSync(outputMinFilePath, minifiedCss);
+
+  } catch (error) {
+    clearLine();
+    console.error(`❌ Error compiling ${outputFileName}:`, error.message);
+    process.exit(1);
+  } finally {
+    // Clean up temporary SCSS file
+    if (fs.existsSync(tempScssPath)) {
+      fs.unlinkSync(tempScssPath);
     }
-  });
+  }
 });
-
-emptyFolder(paths.temp);
-fs.rmdirSync(paths.temp);
 
 clearLine();
 console.log("[WPMoo] Styles built successfully! 🎨");
+
