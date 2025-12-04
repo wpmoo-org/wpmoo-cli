@@ -62,7 +62,7 @@ class CLIApplication extends Application
         // Always register essential commands.
         $this->add(new InfoCommand());
 
-        $commands_directory = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Commands';
+        $commands_directory = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'CLI' . DIRECTORY_SEPARATOR . 'Commands';
         $commands_namespace = 'WPMoo\\CLI\\Commands\\';
 
         // Add commands based on context.
