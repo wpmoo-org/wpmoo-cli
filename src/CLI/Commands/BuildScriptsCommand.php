@@ -59,12 +59,12 @@ class BuildScriptsCommand extends BaseCommand
 
         // 3. Determine Target Directory
         $target_dir = getcwd();
-        
+
         // 4. Run the script
         $command = ['node', $script_path, $target_dir];
 
         $process = new Process($command);
-        $process->setTimeout(300); 
+        $process->setTimeout(300);
 
         $process->run(function ($type, $buffer) {
             echo $buffer;

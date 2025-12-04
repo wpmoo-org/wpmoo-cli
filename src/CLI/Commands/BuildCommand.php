@@ -49,7 +49,7 @@ class BuildCommand extends BaseCommand
         // 1. Run Themes Build
         $io->section('Building Themes...');
         $command = $application->find('build:themes');
-        
+
         // We pass the same arguments/options if needed, or an empty array
         $themesInput = new ArrayInput([]);
         $returnCode = $command->run($themesInput, $output);
@@ -65,7 +65,7 @@ class BuildCommand extends BaseCommand
             $scriptsCommand = $application->find('build:scripts');
             $scriptsInput = new ArrayInput([]);
             $returnCode = $scriptsCommand->run($scriptsInput, $output);
-            
+
             if ($returnCode !== 0) {
                 $io->error('Scripts build failed. Aborting full build.');
                 return $returnCode;

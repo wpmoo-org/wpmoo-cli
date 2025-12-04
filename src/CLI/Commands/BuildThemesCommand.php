@@ -63,7 +63,7 @@ class BuildThemesCommand extends BaseCommand
         // 3. Determine Target Directory
         // For now, we assume the current working directory is the target
         $target_dir = getcwd();
-        
+
         $io->text("Target: " . $target_dir);
         $io->text("Script: " . $script_path);
         $io->newLine();
