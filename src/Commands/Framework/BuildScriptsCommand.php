@@ -1,6 +1,6 @@
 <?php
 
-namespace WPMoo\CLI\Commands;
+namespace WPMoo\CLI\Commands\Framework;
 
 use WPMoo\CLI\Support\BaseCommand;
 use Symfony\Component\Console\Input\InputInterface;

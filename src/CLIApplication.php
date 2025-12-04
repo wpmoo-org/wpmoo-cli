@@ -8,13 +8,6 @@ use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Command\ListCommand;
 use Symfony\Component\Console\Command\HelpCommand;
-use WPMoo\CLI\Commands\InfoCommand;
-use WPMoo\CLI\Commands\RenameCommand;
-use WPMoo\CLI\Commands\DeployCommand;
-use WPMoo\CLI\Commands\UpdateCommand;
-use WPMoo\CLI\Commands\BuildThemesCommand;
-use WPMoo\CLI\Commands\BuildScriptsCommand;
-use WPMoo\CLI\Commands\BuildCommand;
 use WPMoo\CLI\Support\Banner;
 use WPMoo\CLI\Support\Filesystem;
 use Symfony\Component\Finder\Finder;
@@ -58,34 +51,20 @@ class CLIApplication extends Application
     private function register_commands_by_context(): void
     {
         $context = $this->identify_project_context();
+        $base_commands_path = dirname(__DIR__) . '/src/Commands';
+        $base_commands_namespace = 'WPMoo\\CLI\\Commands\\';
 
-        // Always register essential commands.
-        $this->add(new InfoCommand());
+        // Always register common commands.
+        $this->find_and_register_commands_in_directory($base_commands_path . '/Common', $base_commands_namespace . 'Common\\');
 
-        $commands_directory = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'CLI' . DIRECTORY_SEPARATOR . 'Commands';
-        $commands_namespace = 'WPMoo\\CLI\\Commands\\';
+        // Register framework commands if in framework or plugin context.
+        if (in_array($context, ['wpmoo-framework', 'wpmoo-plugin', 'wpmoo-theme'])) {
+            $this->find_and_register_commands_in_directory($base_commands_path . '/Framework', $base_commands_namespace . 'Framework\\');
+        }
 
-        // Add commands based on context.
-        switch ($context) {
-            case 'wpmoo-cli':
-                // No additional commands for wpmoo-cli beyond essential and default ListCommand.
-                break;
-            case 'wpmoo-framework':
-                // Commands specific to the wpmoo framework.
-                // Assuming all framework-specific commands are in the main Commands directory
-                // or a dedicated subdirectory, we can register them.
-                $this->find_and_register_commands_in_directory($commands_directory, $commands_namespace);
-                break;
-            case 'wpmoo-plugin':
-            case 'wpmoo-theme':
-                // For WPMoo-based plugins and themes, register all commands.
-                $this->find_and_register_commands_in_directory($commands_directory, $commands_namespace);
-                break;
-            case 'unknown':
-            default:
-                // For unknown contexts, only essential commands are registered (InfoCommand is already there).
-                // No additional commands are registered here to avoid unexpected behavior.
-                break;
+        // Register plugin-specific commands only in plugin context.
+        if (in_array($context, ['wpmoo-plugin', 'wpmoo-theme'])) {
+            $this->find_and_register_commands_in_directory($base_commands_path . '/Plugin', $base_commands_namespace . 'Plugin\\');
         }
     }
 
@@ -214,7 +193,7 @@ class CLIApplication extends Application
                     'help',
                     'h',
                     InputOption::VALUE_NONE,
-                    'Display help for the given command. When no command is given display help for the list command'
+                    'Display help for the given command. '
                 ),
                 new InputOption(
                     'quiet',
@@ -297,23 +276,8 @@ class CLIApplication extends Application
         $finder->files()->in($directory)->name('*.php');
 
         foreach ($finder as $file) {
-            // Convert file path to class name
-            // Example: /path/to/src/CLI/Commands/InfoCommand.php -> WPMoo\CLI\Commands\InfoCommand
-            $class = $namespace . str_replace(
-                [
-                    realpath($directory) . DIRECTORY_SEPARATOR,
-                    '.php',
-                    '/'
-                ],
-                [
-                    '',
-                    '',
-                    '\\'
-                ],
-                $file->getRealPath()
-            );
+            $class = $namespace . str_replace('.php', '', $file->getFilename());
 
-            // Ensure the class exists and extends Symfony's Command class
             if (class_exists($class) && is_subclass_of($class, \Symfony\Component\Console\Command\Command::class)) {
                 $this->add(new $class());
             }
