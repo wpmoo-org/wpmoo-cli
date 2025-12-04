@@ -3,7 +3,7 @@ const fs = require("fs");
 const { execSync } = require('child_process');
 
 // 1. Determine the Project Root (Target)
-const targetDir = process.argv[2] ? path.resolve(process.argv[2]) : process.cwd();
+const targetDir = process.env.TARGET_DIR ? path.resolve(process.env.TARGET_DIR) : process.cwd();
 
 console.log(`[WPMoo] Target Directory: ${targetDir}`);
 
@@ -138,9 +138,9 @@ themeColors.forEach((themeColor, colorIndex) => {
     const result = sass.compile(tempScssPath, {
       style: "expanded", // Always compile expanded first for consistency
       loadPaths: [
+        targetDir, // Project root
         paths.node_modules, // Project's node_modules
         path.join(__dirname, "../node_modules"), // CLI's node_modules
-        paths.scss // Project's scss folder
       ],
       quietDeps: true
     });
@@ -162,7 +162,7 @@ themeColors.forEach((themeColor, colorIndex) => {
     fs.writeFileSync(outputFilePath, finalCss);
 
     // Minify using clean-css-cli
-    const minifiedCss = execSync(`${cleanCssCliPath} --skip-rebase -O2`, { input: finalCss }).toString();
+    const minifiedCss = execSync(`${cleanCssCliPath} -O2`, { input: finalCss }).toString();
     fs.writeFileSync(outputMinFilePath, minifiedCss);
 
   } catch (error) {

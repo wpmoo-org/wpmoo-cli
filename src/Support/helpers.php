@@ -6,7 +6,7 @@
  * @param string ...$segments Path segments to join.
  * @return string Joined path.
  */
-function path_join(string ...$segments): string
+function wpmoo_path_join(string ...$segments): string
 {
     $filtered = array_filter($segments, 'strlen');
 

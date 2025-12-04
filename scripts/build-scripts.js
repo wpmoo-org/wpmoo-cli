@@ -2,7 +2,7 @@ const path = require("path");
 const fs = require("fs");
 
 // 1. Determine the Project Root (Target)
-const targetDir = process.argv[2] ? path.resolve(process.argv[2]) : process.cwd();
+const targetDir = process.env.TARGET_DIR ? path.resolve(process.env.TARGET_DIR) : process.cwd();
 
 console.log(`[WPMoo] Target Directory: ${targetDir}`);
 
