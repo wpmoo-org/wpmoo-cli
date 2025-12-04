@@ -12,6 +12,7 @@ use WPMoo\CLI\Commands\InfoCommand;
 use WPMoo\CLI\Commands\RenameCommand;
 use WPMoo\CLI\Commands\DeployCommand;
 use WPMoo\CLI\Commands\UpdateCommand;
+use WPMoo\CLI\Commands\BuildThemesCommand;
 use WPMoo\CLI\Support\Banner;
 use WPMoo\CLI\Support\Filesystem;
 
@@ -69,6 +70,7 @@ class CLIApplication extends Application
             case 'wpmoo-framework':
                 // In wpmoo framework, add deploy commands.
                 $commands[] = new DeployCommand();
+                $commands[] = new BuildThemesCommand();
                 break;
             case 'wpmoo-plugin':
             default:
@@ -76,6 +78,7 @@ class CLIApplication extends Application
                 $commands[] = new DeployCommand();
                 $commands[] = new RenameCommand();
                 $commands[] = new UpdateCommand();
+                $commands[] = new BuildThemesCommand();
                 break;
         }
 
