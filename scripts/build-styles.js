@@ -44,7 +44,8 @@ if (isDevMode && process.env.npm_config_loglevel !== 'silent') {
 const paths = {
   css: path.join(targetDir, "assets/css"),
   scss: path.join(targetDir, "resources/scss"),
-  picoScopedCss: path.join(__dirname, "../node_modules/@picocss/pico/css/pico.conditional.css"),
+  temp: path.join(targetDir, ".wpmoo-temp"),
+  picoScopedCss: path.join(targetDir, "node_modules/@picocss/pico/css/pico.conditional.css"),
 };
 
 const createFolderIfNotExists = (foldername) => {
@@ -59,6 +60,7 @@ if (!fs.existsSync(paths.scss)) {
 }
 
 createFolderIfNotExists(paths.css);
+createFolderIfNotExists(paths.temp); // Create temp dir
 
 const year = new Date().getFullYear();
 const banner =
@@ -94,7 +96,7 @@ themeColors.forEach((themeColor) => {
     `);\n` +
     `@use "wpmoo";\n`;
   
-  const tempScssPath = path.join(paths.scss, `_temp_wpmoo_build_${themeColor}.scss`);
+  const tempScssPath = path.join(paths.temp, `_temp_wpmoo_build_${themeColor}.scss`); // Use temp dir
   fs.writeFileSync(tempScssPath, tempScssContent);
 
   try {
@@ -112,12 +114,6 @@ themeColors.forEach((themeColor) => {
     fs.writeFileSync(outputFilePath, finalCss);
 
     // Minify with clean-css, preserving the license comment (banner)
-    // -O2 level optimization might reorder/remove comments, so we might need to be careful.
-    // But clean-css usually preserves "/*! ... */" comments.
-    // However, since we construct the finalCss with the banner, we should pass it to clean-css.
-    // We might need to tell clean-css to preserve the first comment or special comments.
-    // Standard behavior preserves /*! ... */
-    
     const minifiedCss = execSync(`${cleanCssCliPath} -O2`, { input: finalCss }).toString();
     fs.writeFileSync(outputMinFilePath, minifiedCss);
 
@@ -130,4 +126,13 @@ themeColors.forEach((themeColor) => {
     }
   }
 });
+
+// Clean up temp dir if empty (optional but nice)
+try {
+    if (fs.existsSync(paths.temp) && fs.readdirSync(paths.temp).length === 0) {
+        fs.rmdirSync(paths.temp);
+    }
+} catch (e) {
+    // Ignore cleanup errors
+}
 
