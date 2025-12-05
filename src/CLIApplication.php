@@ -58,7 +58,7 @@ class CLIApplication extends Application
     private function register_commands_by_context(): void
     {
         $context = $this->project_identifier->identify_project_context(); // Modified
-        $base_commands_path = dirname(__DIR__) . '/Commands';
+        $base_commands_path = __DIR__ . '/Commands'; // Corrected path
         $base_commands_namespace = 'WPMoo\\CLI\\Commands\\';
 
         // Always register common commands.
