@@ -8,7 +8,9 @@
  */
 function wpmoo_path_join(string ...$segments): string
 {
-    $filtered = array_filter($segments, 'strlen');
+    $filtered = array_filter($segments, function ($value) {
+        return (string) $value !== '';
+    });
 
     $path = implode(DIRECTORY_SEPARATOR, $filtered);
 

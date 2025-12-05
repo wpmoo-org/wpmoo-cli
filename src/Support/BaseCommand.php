@@ -8,6 +8,10 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use WPMoo\CLI\Interfaces\CommandInterface;
 use WPMoo\CLI\Support\ConfigManager;
+use WPMoo\CLI\Support\Filesystem;
+use WPMoo\CLI\Support\ProjectIdentifier;
+
+// Added
 
 /**
  * Base command class for the WPMoo CLI.
@@ -28,12 +32,24 @@ abstract class BaseCommand extends Command implements CommandInterface
     protected ConfigManager $config_manager;
 
     /**
+     * @var Filesystem The filesystem abstraction layer.
+     */
+    protected Filesystem $filesystem;
+
+    /**
+     * @var ProjectIdentifier The project identifier.
+     */
+    protected ProjectIdentifier $project_identifier; // Added
+
+    /**
      * BaseCommand constructor.
      */
     public function __construct()
     {
         parent::__construct();
         $this->config_manager = new ConfigManager();
+        $this->filesystem = new Filesystem();
+        $this->project_identifier = new ProjectIdentifier($this->filesystem); // Added
     }
 
     /**
@@ -74,7 +90,7 @@ abstract class BaseCommand extends Command implements CommandInterface
      */
     protected function get_cwd(): string
     {
-        $cwd = getcwd();
+        $cwd = $this->filesystem->get_cwd();
         return $cwd ? $cwd : '.';
     }
 
@@ -100,8 +116,8 @@ abstract class BaseCommand extends Command implements CommandInterface
     /**
      * Format file size in human-readable format.
      *
-     * @param int $size Size in bytes.
-     * @param int $decimals Number of decimal places.
+     * @param int $file_size Size in bytes.
+     * @param int $decimal_places Number of decimal places.
      * @return string Formatted size.
      */
     protected function format_file_size(int $file_size, int $decimal_places = 2): string
@@ -122,49 +138,6 @@ abstract class BaseCommand extends Command implements CommandInterface
      */
     protected function identify_project(): array
     {
-        $current_working_directory = $this->get_cwd();
-
-        // Check for wpmoo framework project.
-        $wpmoo_root_path = $current_working_directory . '/wpmoo.php';
-        $is_wpmoo_framework = file_exists($wpmoo_root_path) &&
-            strpos(file_get_contents($wpmoo_root_path), 'Plugin Name: WPMoo Framework') !== false;
-
-        if ($is_wpmoo_framework) {
-            return [
-                'found' => true,
-                'type' => 'wpmoo-framework',
-                'main_file' => $wpmoo_root_path,
-                'readme_file' => $current_working_directory . '/readme.txt', // Check if readme.txt exists.
-            ];
-        }
-
-        // Check for wpmoo-starter or other wpmoo-based plugin.
-        $php_files = glob($current_working_directory . '/*.php');
-        if ($php_files) {
-            foreach ($php_files as $file) {
-                $content = file_get_contents($file);
-                // Look for WPMoo in plugin header.
-                if (
-                    preg_match('/(wpmoo|WPMoo)/i', $content) &&
-                    ( preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
-                    preg_match('/^[ \t\/*#@]*Theme Name:/im', $content) )
-                ) {
-                    $readme_path = $current_working_directory . '/readme.txt';
-                    return [
-                        'found' => true,
-                        'type' => 'wpmoo-plugin',
-                        'main_file' => $file,
-                        'readme_file' => file_exists($readme_path) ? $readme_path : null,
-                    ];
-                }
-            }
-        }
-
-        return [
-            'found' => false,
-            'type' => 'unknown',
-            'main_file' => null,
-            'readme_file' => null,
-        ];
+        return $this->project_identifier->identify_project();
     }
 }

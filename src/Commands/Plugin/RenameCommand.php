@@ -6,7 +6,9 @@ use WPMoo\CLI\Support\BaseCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use WPMoo\CLI\Support\Filesystem;
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Component\Process\Process;
 
 /**
  * Rename command for the WPMoo CLI.
@@ -21,6 +23,19 @@ use Symfony\Component\Yaml\Yaml;
  */
 class RenameCommand extends BaseCommand
 {
+    /**
+     * @var Filesystem The filesystem abstraction layer.
+     */
+    protected Filesystem $filesystem;
+
+    /**
+     * RenameCommand constructor.
+     */
+    public function __construct()
+    {
+        parent::__construct();
+        $this->filesystem = new Filesystem();
+    }
     /**
      * Configure the command.
      */
@@ -177,8 +192,7 @@ class RenameCommand extends BaseCommand
      * @param string $new_name
      * @param string $new_namespace
      * @param string $new_text_domain
-     * @param string $new_filename
-     * @param OutputInterface $output
+     * @param SymfonyStyle $io
      */
     private function rename_plugin(
         array $project_info,
@@ -217,8 +231,8 @@ class RenameCommand extends BaseCommand
         }
 
         // Rename main plugin file.
-        if (file_exists($old_main_file)) {
-            rename($old_main_file, $newMainFile);
+        if ($this->filesystem->file_exists($old_main_file)) {
+            $this->filesystem->rename($old_main_file, $newMainFile);
             $io->writeln("✓ Renamed '{$old_main_file}' to '{$newMainFile}'");
         } else {
             $io->error("Main plugin file '{$old_main_file}' not found. Cannot rename.");
@@ -277,48 +291,32 @@ class RenameCommand extends BaseCommand
      * Runs composer dump-autoload to refresh the autoloader after namespace changes.
      *
      * @param string $dir The project directory.
-     * @param OutputInterface $output The output interface.
+     * @param SymfonyStyle $io The output interface.
      */
     private function run_composer_dump_autoload(string $dir, SymfonyStyle $io): void
     {
         // Check if composer.json exists in the project directory.
         $composerJsonPath = $dir . '/composer.json';
-        if (! file_exists($composerJsonPath)) {
+        if (! $this->filesystem->file_exists($composerJsonPath)) {
             $io->note('No composer.json found, skipping autoload dump.');
             return;
         }
 
         $io->writeln('<success>Running composer dump-autoload...</success>');
 
-        // Check if composer is available.
-        $result_code = 0;
-        $output_lines = [];
+        $process_command = ['composer', 'dump-autoload'];
+        $process = new Process($process_command, $dir);
 
-        // Using @ to suppress errors in case composer is not found.
-        $hasComposer = ! empty(trim(shell_exec('command -v composer')));
-        if ($hasComposer) {
-            // Run composer dump-autoload in the project directory.
-            $command = 'cd ' . escapeshellarg($dir) . ' && composer dump-autoload';
-            exec($command, $output_lines, $result_code);
-        } else {
-            // Check if composer.phar exists in the project directory.
-            $composerPharPath = $dir . '/composer.phar';
-            if (file_exists($composerPharPath)) {
-                $command = 'cd ' . escapeshellarg($dir) . ' && php composer.phar dump-autoload';
-                exec($command, $output_lines, $result_code);
-            } else {
-                $io->error('Composer not found and no composer.phar in project directory. Please run composer dump-autoload manually.');
-                return;
-            }
-        }
-
-        if ($result_code === 0) {
+        try {
+            $process->mustRun();
             $io->writeln('<success>Successfully updated autoloader.</success>');
-        } else {
-            $io->error('Failed to run composer dump-autoload. Please run it manually.');
+            $output_lines = explode("\n", $process->getOutput());
             if (! empty($output_lines)) {
                 $io->listing($output_lines);
             }
+        } catch (\Symfony\Component\Process\Exception\ProcessFailedException $exception) {
+            $io->error('Failed to run composer dump-autoload. Please run it manually.');
+            $io->listing(explode("\n", $exception->getMessage()));
         }
     }
 
@@ -327,7 +325,7 @@ class RenameCommand extends BaseCommand
      *
      * @param SymfonyStyle $io The output interface.
      * @param string $old_main_file The old main plugin file path.
-     * @param string $newMainFile The new main plugin file path.
+     * @param string $new_main_file The new main plugin file path.
      */
     private function inform_about_plugin_reactivation(SymfonyStyle $io, string $old_main_file, string $new_main_file): void
     {
@@ -366,7 +364,7 @@ class RenameCommand extends BaseCommand
     ) {
         $config_file = $dir . '/wpmoo-config.yml';
         $config = [];
-        if (file_exists($config_file)) {
+        if ($this->filesystem->file_exists($config_file)) {
             $config = Yaml::parseFile($config_file);
         }
 
@@ -374,23 +372,10 @@ class RenameCommand extends BaseCommand
         $config['project']['namespace'] = $new_namespace;
         $config['project']['text_domain'] = $new_text_domain;
 
-        file_put_contents($config_file, Yaml::dump($config, 2));
+        $this->filesystem->put_file_contents($config_file, Yaml::dump($config, 2));
     }
 
-    /**
-     * Updates the plugin name in the main plugin file.
-     *
-     * @param string $file
-     * @param string $new_name
-     * @param OutputInterface $output
-     */
-    private function update_plugin_name(string $file, string $new_name, SymfonyStyle $io)
-    {
-        $content = file_get_contents($file);
-        $new_content = preg_replace('/^(Plugin Name: ).*$/m', '$1' . $new_name, $content);
-        file_put_contents($file, $new_content);
-        $io->writeln("✓ Updated Plugin Name to '{$new_name}' in '{$file}'");
-    }
+
 
     /**
      * Updates the Plugin Name and Text Domain headers in the main plugin file.
@@ -410,7 +395,7 @@ class RenameCommand extends BaseCommand
         string $new_text_domain,
         SymfonyStyle $io
     ) {
-        $content = file_get_contents($main_file);
+        $content = $this->filesystem->get_file_contents($main_file);
         $original_content = $content;
 
         // Update Plugin Name header.
@@ -485,7 +470,7 @@ class RenameCommand extends BaseCommand
         }
 
         if ($content !== $original_content) {
-            file_put_contents($main_file, $content);
+            $this->filesystem->put_file_contents($main_file, $content);
         }
     }
 
@@ -506,7 +491,7 @@ class RenameCommand extends BaseCommand
             }
 
             $path = $file->getRealPath();
-            $content = file_get_contents($path);
+            $content = $this->filesystem->get_file_contents($path);
             // Replace both namespace declarations and fully qualified class names.
             $new_content = str_replace(
                 [ $old_namespace . '\\', 'namespace ' . $old_namespace . ';' ],
@@ -524,7 +509,7 @@ class RenameCommand extends BaseCommand
             );
 
             if ($content !== $new_content) {
-                file_put_contents($path, $new_content);
+                $this->filesystem->put_file_contents($path, $new_content);
                 $io->writeln("✓ Updated namespace in '{$path}'");
             }
         }
@@ -536,7 +521,7 @@ class RenameCommand extends BaseCommand
      * @param string $dir
      * @param string $old_text_domain
      * @param string $new_text_domain
-     * @param OutputInterface $output
+     * @param SymfonyStyle $io
      */
     private function update_text_domains(string $dir, string $old_text_domain, string $new_text_domain, SymfonyStyle $io)
     {
@@ -551,7 +536,7 @@ class RenameCommand extends BaseCommand
             }
 
             $path = $file->getRealPath();
-            $content = file_get_contents($path);
+            $content = $this->filesystem->get_file_contents($path);
 
             // Pattern to match text domains in translation functions.
             $functions = [ '__', '_e', '_n', '_x', '_ex', '_nx', '_n_noop', '_nx_noop' ];
@@ -599,7 +584,7 @@ class RenameCommand extends BaseCommand
             );
 
             if ($content !== $new_content) {
-                file_put_contents($path, $new_content);
+                $this->filesystem->put_file_contents($path, $new_content);
                 $io->writeln("✓ Updated text domain in '{$path}' (from '{$old_text_domain}' to '{$new_text_domain}')");
             }
         }
@@ -628,7 +613,7 @@ class RenameCommand extends BaseCommand
             }
 
             $path = $file->getRealPath();
-            $content = file_get_contents($path);
+            $content = $this->filesystem->get_file_contents($path);
             $new_content = $content;
 
             // Update @package references (both old plugin name and old namespace).
@@ -668,7 +653,7 @@ class RenameCommand extends BaseCommand
             $new_content = preg_replace($pattern, $new_plugin_name, $new_content);
 
             if ($content !== $new_content) {
-                file_put_contents($path, $new_content);
+                $this->filesystem->put_file_contents($path, $new_content);
                 $io->writeln("✓ Updated general references in '{$path}'");
             }
         }
@@ -695,7 +680,7 @@ class RenameCommand extends BaseCommand
             }
 
             $path = $file->getRealPath();
-            $content = file_get_contents($path);
+            $content = $this->filesystem->get_file_contents($path);
 
             // Replace old plugin name with new plugin name, preserving case where appropriate.
             $new_content = $content;
@@ -728,7 +713,7 @@ class RenameCommand extends BaseCommand
             }
 
             if ($content !== $new_content) {
-                file_put_contents($path, $new_content);
+                $this->filesystem->put_file_contents($path, $new_content);
                 $io->writeln("✓ Updated plugin name in '{$path}' (from '{$old_plugin_name}' to '{$new_plugin_name}')");
             }
         }
@@ -737,20 +722,20 @@ class RenameCommand extends BaseCommand
     /**
      * Updates the readme.txt file.
      *
-     * @param string $readmeFilePath The path to the readme.txt file.
+     * @param string $readme_file_path The path to the readme.txt file.
      * @param string $old_plugin_name The old plugin name.
      * @param string $new_plugin_name The new plugin name.
      * @param string $old_text_domain The old text domain.
      * @param string $new_text_domain The new text domain.
-     * @param OutputInterface $output The output interface.
+     * @param SymfonyStyle $io The output interface.
      */
     private function update_readme_file(string $readme_file_path, string $old_plugin_name, string $new_plugin_name, string $old_text_domain, string $new_text_domain, SymfonyStyle $io)
     {
-        if (! file_exists($readme_file_path)) {
+        if (! $this->filesystem->file_exists($readme_file_path)) {
             return;
         }
 
-        $content = file_get_contents($readme_file_path);
+        $content = $this->filesystem->get_file_contents($readme_file_path);
         $original_content = $content;
 
         // Update Plugin Name.
@@ -793,7 +778,7 @@ class RenameCommand extends BaseCommand
         }
 
         if ($content !== $original_content) {
-            file_put_contents($readme_file_path, $content);
+            $this->filesystem->put_file_contents($readme_file_path, $content);
             $io->writeln('✓ Updated readme.txt');
         }
     }
@@ -806,7 +791,7 @@ class RenameCommand extends BaseCommand
      */
     private function get_old_text_domain(string $main_file): ?string
     {
-        $content = file_get_contents($main_file);
+        $content = $this->filesystem->get_file_contents($main_file);
         if (preg_match('/^[ \t\/*#@]*Text Domain:\s*(.*)$/im', $content, $matches)) {
             return trim($matches[1]);
         }
@@ -828,12 +813,12 @@ class RenameCommand extends BaseCommand
      */
     private function get_plugin_file_headers(string $main_file): array
     {
-        if (! file_exists($main_file)) {
+        if (! $this->filesystem->file_exists($main_file)) {
             return [];
         }
 
         $headers = [];
-        $content = file_get_contents($main_file);
+        $content = $this->filesystem->get_file_contents($main_file);
 
         $header_keys = [
             'name'        => 'Plugin Name',
@@ -882,11 +867,11 @@ class RenameCommand extends BaseCommand
      */
     private function get_project_config(string $dir): array
     {
-        $config_file = $dir . '/wpmoo-config.yml';
-        if (file_exists($config_file)) {
-            $config = Yaml::parseFile($config_file);
+        // Use ConfigManager to load config, it already uses Filesystem.
+        $config_manager_for_dir = new \WPMoo\CLI\Support\ConfigManager($dir);
+        if ($config_manager_for_dir->isLoaded()) {
+            $config = $config_manager_for_dir->all();
             if (isset($config['project'])) {
-                // Ensure all expected keys are present, even if empty.
                 return array_merge(
                     [
                         'name' => '',
@@ -903,8 +888,8 @@ class RenameCommand extends BaseCommand
         }
 
         $composer_file = $dir . '/composer.json';
-        if (file_exists($composer_file)) {
-            $composer_data = json_decode(file_get_contents($composer_file), true);
+        if ($this->filesystem->file_exists($composer_file)) {
+            $composer_data = json_decode($this->filesystem->get_file_contents($composer_file), true);
             if (isset($composer_data['autoload']['psr-4'])) {
                 $namespaces = $composer_data['autoload']['psr-4'];
                 $namespace = rtrim(key($namespaces), '\\');

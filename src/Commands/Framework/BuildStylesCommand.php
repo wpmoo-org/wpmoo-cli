@@ -75,15 +75,9 @@ class BuildStylesCommand extends BaseCommand
         $process->setTimeout(300); // 5 minutes timeout
 
         // Stream output to console
-        $process->run(function ($type, $buffer) use ($io) {
-            if (Process::ERR === $type) {
-                // Determine if it's a real error or just stderr output (some tools use stderr for progress)
-                // We'll just print it.
-                echo $buffer;
-            } else {
-                echo $buffer;
-            }
-        });
+        $returnCode = $process->run(function ($type, $buffer) use ($io) {
+            $io->write($buffer);
+        }); // Added closing for anonymous function
 
         if (!$process->isSuccessful()) {
             $io->error('Style build failed.');

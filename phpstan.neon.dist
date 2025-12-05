@@ -1,5 +1,5 @@
 parameters:
-    level: 0
+    level: 5
     phpVersion: 70400
     paths:
         - src
@@ -7,8 +7,12 @@ parameters:
         - tests
     scanDirectories:
         - vendor
-    reportUnmatchedIgnoredErrors: false
+    reportUnmatchedIgnoredErrors: true
     treatPhpDocTypesAsCertain: false
     bootstrapFiles:
     - vendor/autoload.php
     - stubs/phpstan-bootstrap.php
+    ignoreErrors:
+        - '#Property WPMoo\\CLI\\Support\\Filesystem::\$wp_filesystem has unknown class WP_Filesystem_Base as its type.#'
+        - '#Function WP_Filesystem invoked with 3 parameters, 0 required.#'
+        - '#Call to method (exists|get_contents|put_contents|move)\(\) on an unknown class WP_Filesystem_Base.#'

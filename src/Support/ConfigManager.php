@@ -4,6 +4,9 @@ namespace WPMoo\CLI\Support;
 
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Yaml\Exception\ParseException;
+use WPMoo\CLI\Support\Filesystem;
+
+// Added
 
 /**
  * Manages project configuration from a wpmoo-config.yml file.
@@ -24,13 +27,20 @@ class ConfigManager
     private ?string $project_root = null;
 
     /**
+     * @var Filesystem The filesystem abstraction layer.
+     */
+    private Filesystem $filesystem; // Added
+
+    /**
      * ConfigManager constructor.
      *
      * @param string|null $start_path The path to start searching from. Defaults to getcwd().
+     * @param Filesystem|null $filesystem The filesystem instance.
      */
-    public function __construct(?string $start_path = null)
+    public function __construct(?string $start_path = null, ?Filesystem $filesystem = null) // Modified
     {
-        $this->load_config($start_path ?? getcwd());
+        $this->filesystem = $filesystem ?? new Filesystem(); // Added
+        $this->load_config($start_path ?? $this->filesystem->get_cwd()); // Modified
     }
 
     /**
@@ -46,7 +56,9 @@ class ConfigManager
         if ($config_file) {
             $this->project_root = dirname($config_file);
             try {
-                $this->config = Yaml::parseFile($config_file) ?? [];
+                // Use Filesystem to get file contents.
+                $content = $this->filesystem->get_file_contents($config_file);
+                $this->config = Yaml::parse($content) ?? []; // Modified
             } catch (ParseException $e) {
                 // Handle error if YAML is invalid.
                 $this->config = [];
@@ -65,7 +77,7 @@ class ConfigManager
         $current_dir = $start_path;
         while ($current_dir && $current_dir !== dirname($current_dir)) {
             $config_file = $current_dir . '/wpmoo-config.yml';
-            if (file_exists($config_file)) {
+            if ($this->filesystem->file_exists($config_file)) { // Modified
                 return $config_file;
             }
             $current_dir = dirname($current_dir);
@@ -73,7 +85,7 @@ class ConfigManager
 
         // Check root one last time
         $config_file = $current_dir . '/wpmoo-config.yml';
-        if (file_exists($config_file)) {
+        if ($this->filesystem->file_exists($config_file)) { // Modified
             return $config_file;
         }
 
@@ -130,5 +142,18 @@ class ConfigManager
     public function isLoaded(): bool
     {
         return !empty($this->config);
+    }
+
+    /**
+     * Saves the project configuration to wpmoo-config.yml.
+     *
+     * @param string $dir The directory to save the config in.
+     * @param array<string, mixed> $data The configuration data to save.
+     * @return bool True on success, false on failure.
+     */
+    public function save_config(string $dir, array $data): bool // New method
+    {
+        $config_file = $dir . '/wpmoo-config.yml';
+        return $this->filesystem->put_file_contents($config_file, Yaml::dump($data, 2)); // Modified
     }
 }

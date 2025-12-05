@@ -160,4 +160,37 @@ class Filesystem
         // For now, we fall back to PHP's glob.
         return glob($pattern, $flags);
     }
+
+    /**
+     * Gets the current working directory.
+     *
+     * @return string The current working directory.
+     */
+    public function get_cwd(): string
+    {
+        $cwd = getcwd();
+        return $cwd ?: '.';
+    }
+
+    /**
+     * Renames a file or directory.
+     *
+     * @param string $oldname The old path.
+     * @param string $newname The new path.
+     * @param bool $overwrite Whether to overwrite the target if it already exists.
+     * @return bool True on success, false on failure.
+     */
+    public function rename(string $oldname, string $newname, bool $overwrite = false): bool
+    {
+        if ($this->wp_filesystem) {
+            // WP_Filesystem's move() function handles renaming and overwriting.
+            return $this->wp_filesystem->move($oldname, $newname, $overwrite);
+        }
+
+        if (! $overwrite && $this->file_exists($newname)) {
+            return false; // Target exists and overwrite is false.
+        }
+
+        return rename($oldname, $newname);
+    }
 }
