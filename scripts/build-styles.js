@@ -113,9 +113,11 @@ themeColors.forEach((themeColor) => {
 
     fs.writeFileSync(outputFilePath, finalCss);
 
-    // Minify with clean-css, preserving the license comment (banner)
-    const minifiedCss = execSync(`${cleanCssCliPath} -O2`, { input: finalCss }).toString();
-    fs.writeFileSync(outputMinFilePath, minifiedCss);
+    // Minify with clean-css only in production mode
+    if (!isDevMode) {
+        const minifiedCss = execSync(`${cleanCssCliPath} -O2`, { input: finalCss }).toString();
+        fs.writeFileSync(outputMinFilePath, minifiedCss);
+    }
 
   } catch (error) {
     console.error(`❌ Error compiling ${outputFileName}:`, error.message);
