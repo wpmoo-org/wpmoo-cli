@@ -45,7 +45,7 @@ const paths = {
   css: path.join(targetDir, "assets/css"),
   scss: path.join(targetDir, "resources/scss"),
   temp: path.join(targetDir, ".wpmoo-temp"),
-  picoScopedCss: path.join(targetDir, "node_modules/@picocss/pico/css/pico.conditional.css"),
+  picoScopedCss: path.join(__dirname, "../node_modules/@picocss/pico/css/pico.conditional.css"),
 };
 
 const createFolderIfNotExists = (foldername) => {
