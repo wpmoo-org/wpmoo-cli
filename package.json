@@ -13,7 +13,7 @@
     "serve": "browser-sync start --proxy 'https://wp-dev.local' --https --startPath '/wp-admin' --no-notify --files 'assets/css/*.css,assets/js/*.js,**/*.php'",
     "dev": "concurrently --kill-others --raw 'npm:watch:styles' 'npm:watch:js' 'npm:watch:php' 'npm:serve'"
   },
-  "devDependencies": {
+  "dependencies": {
     "sass": "^1.77.8",
     "clean-css-cli": "^5.6.3",
     "browser-sync": "^3.0.2",
@@ -21,9 +21,11 @@
     "chokidar-cli": "^3.0.0",
     "replace-in-file": "^7.1.2",
     "open": "^10.1.0",
+    "@picocss/pico": "^2.1.1"
+  },
+  "devDependencies": {
     "prettier": "^3.3.3",
     "stylelint": "^16.7.0",
-    "stylelint-config-standard-scss": "^13.1.0",
-    "@picocss/pico": "^2.1.1"
+    "stylelint-config-standard-scss": "^13.1.0"
   }
 }
