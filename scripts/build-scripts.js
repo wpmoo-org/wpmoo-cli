@@ -7,7 +7,9 @@ const targetDir = process.argv[2]
   : (process.env.TARGET_DIR ? path.resolve(process.env.TARGET_DIR) : process.cwd());
 
 // Only log the target directory once if run directly with output
-if (process.env.npm_config_loglevel !== 'silent' && process.argv.length > 2) { // Check if TARGET_DIR was provided as an argument
+const quietBuild = process.env.WPMOO_QUIET_BUILD === 'true';
+
+if (!quietBuild && process.env.npm_config_loglevel !== 'silent' && process.argv.length > 2) { // Check if TARGET_DIR was provided as an argument
     console.log(`[WPMoo] Building scripts for: ${targetDir}`);
 }
 
