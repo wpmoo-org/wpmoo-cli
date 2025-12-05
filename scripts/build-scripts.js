@@ -2,7 +2,9 @@ const path = require("path");
 const fs = require("fs");
 
 // 1. Determine the Project Root (Target)
-const targetDir = process.argv[2] ? path.resolve(process.argv[2]) : process.cwd();
+const targetDir = process.argv[2] 
+  ? path.resolve(process.argv[2]) 
+  : (process.env.TARGET_DIR ? path.resolve(process.env.TARGET_DIR) : process.cwd());
 
 // Only log the target directory once if run directly with output
 if (process.env.npm_config_loglevel !== 'silent' && process.argv.length > 2) { // Check if TARGET_DIR was provided as an argument

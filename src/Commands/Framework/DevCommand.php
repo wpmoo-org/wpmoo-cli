@@ -7,6 +7,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
+use WPMoo\CLI\Support\NodeEnvironment;
 
 /**
  * Development command for WPMoo projects.
@@ -47,6 +48,12 @@ class DevCommand extends BaseCommand
 
         $project_root = $project['root'] ?? $this->get_cwd();
         $cli_root = dirname(__DIR__, 3);
+
+        // Ensure internal Node.js environment is ready
+        $node_env = new NodeEnvironment($this->filesystem);
+        if (!$node_env->ensure_dependencies($io)) {
+            return self::FAILURE;
+        }
 
         $io->writeln(sprintf('<info>Starting dev server for project:</info> %s', $project_root));
         $io->note('Initial build in progress...');
