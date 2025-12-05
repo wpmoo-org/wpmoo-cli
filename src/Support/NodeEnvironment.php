@@ -61,18 +61,12 @@ class NodeEnvironment
         $process = new Process(['npm', 'install', '--production', '--no-audit', '--no-fund'], $this->cli_root);
         $process->setTimeout(600); // 10 minutes
 
-        try {
-            $process->mustRun(function ($type, $buffer) {
-                if (Process::ERR === $type) {
-                    // Optional: suppress npm warnings if desired, or show verbose output.
-                    // $io->text($buffer);
-                } else {
-                    // $io->text($buffer);
-                }
-            });
-
-            $io->success('Dependencies installed successfully.');
-            return true;
+                try {
+                    $process->mustRun(function ($type, $buffer) use ($io) {
+                        $io->write($buffer);
+                    });
+                    
+                    $io->success('Dependencies installed successfully.');            return true;
         } catch (\Exception $e) {
             $io->error('Failed to install internal dependencies.');
             $io->text($e->getMessage());
