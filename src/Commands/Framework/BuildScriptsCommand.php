@@ -7,6 +7,8 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\ProcessFailedException;
+use WPMoo\CLI\Support\NodeEnvironment;
 
 /**
  * Build Scripts command for WPMoo.
@@ -40,25 +42,22 @@ class BuildScriptsCommand extends BaseCommand
         $io = new SymfonyStyle($input, $output);
         $io->title('WPMoo Script Builder');
 
-        // 1. Check for Node.js
-        $process = new Process(['node', '-v']);
-        $process->run();
-
-        if (!$process->isSuccessful()) {
-            $io->error('Node.js is required to build scripts but was not found in your PATH.');
+        // 1. Ensure internal Node.js environment is ready
+        $node_env = new NodeEnvironment($this->filesystem);
+        if (!$node_env->ensure_dependencies($io)) {
             return 1;
         }
 
         // 2. Locate the build script
         $script_path = dirname(__DIR__, 3) . '/scripts/build-scripts.js';
 
-        if (!file_exists($script_path)) {
+        if (!$this->filesystem->file_exists($script_path)) {
             $io->error("Build script not found at: {$script_path}");
             return 1;
         }
 
         // 3. Determine Target Directory
-        $target_dir = getcwd();
+        $target_dir = $this->get_cwd();
 
         // 4. Run the script
         $command = ['node', $script_path, $target_dir];
@@ -66,8 +65,8 @@ class BuildScriptsCommand extends BaseCommand
         $process = new Process($command);
         $process->setTimeout(300);
 
-        $process->run(function ($type, $buffer) {
-            echo $buffer;
+        $process->run(function ($type, $buffer) use ($io) {
+            $io->write($buffer);
         });
 
         if (!$process->isSuccessful()) {

@@ -8,6 +8,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
+use WPMoo\CLI\Support\NodeEnvironment;
 
 /**
  * Build Themes command for WPMoo.
@@ -41,28 +42,25 @@ class BuildStylesCommand extends BaseCommand
         $io = new SymfonyStyle($input, $output);
         $io->title('WPMoo Style Builder');
 
-        // 1. Check for Node.js
-        $process = new Process(['node', '-v']);
-        $process->run();
-
-        if (!$process->isSuccessful()) {
-            $io->error('Node.js is required to build styles but was not found in your PATH.');
+        // 1. Ensure internal Node.js environment is ready
+        $node_env = new NodeEnvironment($this->filesystem);
+        if (!$node_env->ensure_dependencies($io)) {
             return 1;
         }
 
         // 2. Locate the build script
-        // We assume we are running from src/CLI/Commands
-        // Script is in scripts/build-themes.js (relative to project root)
+        // We assume we are running from src/CLI/Commands/Framework
+        // Script is in scripts/build-styles.js (relative to project root)
         $script_path = dirname(__DIR__, 3) . '/scripts/build-styles.js';
 
-        if (!file_exists($script_path)) {
+        if (!$this->filesystem->file_exists($script_path)) {
             $io->error("Build script not found at: {$script_path}");
             return 1;
         }
 
         // 3. Determine Target Directory
         // For now, we assume the current working directory is the target
-        $target_dir = getcwd();
+        $target_dir = $this->get_cwd();
 
         $io->text("Target: " . $target_dir);
         $io->text("Script: " . $script_path);
@@ -75,9 +73,9 @@ class BuildStylesCommand extends BaseCommand
         $process->setTimeout(300); // 5 minutes timeout
 
         // Stream output to console
-        $returnCode = $process->run(function ($type, $buffer) use ($io) {
+        $process->run(function ($type, $buffer) use ($io) {
             $io->write($buffer);
-        }); // Added closing for anonymous function
+        });
 
         if (!$process->isSuccessful()) {
             $io->error('Style build failed.');
