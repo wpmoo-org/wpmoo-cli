@@ -57,7 +57,9 @@ class NodeEnvironment
         // 3. Attempt to install dependencies.
         $io->note('Installing internal WPMoo CLI build dependencies (one-time setup)...');
 
-        $process = new Process(['npm', 'install', '--no-audit', '--no-fund'], $this->cli_root);
+        // Force development environment to ensure devDependencies are installed.
+        $env = array_merge($_SERVER, ['NODE_ENV' => 'development']);
+        $process = new Process(['npm', 'install', '--no-audit', '--no-fund'], $this->cli_root, $env);
         $process->setTimeout(600); // 10 minutes
 
         try {
