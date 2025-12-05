@@ -65,8 +65,8 @@ class DevCommand extends BaseCommand
         $io->note('Initial build in progress...');
 
         // Initial Build: Styles
-        $io->text('Building styles...');
-        $style_process = new Process(['node', $build_styles_script, $project_root]);
+        $io->text('Building styles (Dev Mode: amber only)...');
+        $style_process = new Process(['node', $build_styles_script, $project_root], null, ['DEV_MODE' => 'true']);
         $style_process->run();
         if (!$style_process->isSuccessful()) {
             $io->error('Style build failed.');
@@ -97,16 +97,15 @@ class DevCommand extends BaseCommand
         // Construct Concurrent Commands
         // We need to wrap paths in quotes to handle spaces and ensure shell interpretation.
 
-                // 1. Watch Styles
-                // chokidar 'path/to/scss/**/*.scss' -c 'node build-styles.js path/to/project'
-                $cmd_watch_styles = sprintf(
-                    '%s/chokidar "%s/resources/scss/**/*.scss" --quiet -c "node %s %s"',
-                    $bin_dir,
-                    $project_root,
-                    $build_styles_script,
-                    $project_root
-                );
-        
+                        // 1. Watch Styles
+                        // chokidar 'path/to/scss/**/*.scss' -c 'DEV_MODE=true node build-styles.js path/to/project'
+                        $cmd_watch_styles = sprintf(
+                            '%s/chokidar "%s/resources/scss/**/*.scss" --quiet -c "DEV_MODE=true node %s %s"',
+                            $bin_dir,
+                            $project_root,
+                            $build_styles_script,
+                            $project_root
+                        );        
                 // 2. Watch Scripts
                 // chokidar 'path/to/js/**/*.js' -c 'node build-scripts.js path/to/project'
                 $cmd_watch_js = sprintf(
