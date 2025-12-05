@@ -94,9 +94,9 @@ class DevCommand extends BaseCommand
         // Construct Concurrent Commands
         
         // 1. Watch Styles
-        // chokidar 'path/to/scss/**/*.scss' -c 'DEV_MODE=true WPMOO_QUIET_BUILD=true node build-styles.js path/to/project'
+        // chokidar 'path/to/scss/**/*.scss' -c 'DEV_MODE=true WPMOO_QUIET_BUILD=true node build-styles.js path/to/project' > /dev/null
         $cmd_watch_styles = sprintf(
-            '%s/chokidar "%s/resources/scss/**/*.scss" --quiet -c "DEV_MODE=true WPMOO_QUIET_BUILD=true node %s %s"',
+            '%s/chokidar "%s/resources/scss/**/*.scss" --quiet -c "DEV_MODE=true WPMOO_QUIET_BUILD=true node %s %s" > /dev/null',
             $bin_dir,
             $project_root,
             $build_styles_script,
@@ -104,9 +104,9 @@ class DevCommand extends BaseCommand
         );
 
         // 2. Watch Scripts
-        // chokidar 'path/to/js/**/*.js' -c 'WPMOO_QUIET_BUILD=true node build-scripts.js path/to/project'
+        // chokidar 'path/to/js/**/*.js' -c 'WPMOO_QUIET_BUILD=true node build-scripts.js path/to/project' > /dev/null
         $cmd_watch_js = sprintf(
-            '%s/chokidar "%s/resources/js/**/*.js" --quiet -c "WPMOO_QUIET_BUILD=true node %s %s"',
+            '%s/chokidar "%s/resources/js/**/*.js" --quiet -c "WPMOO_QUIET_BUILD=true node %s %s" > /dev/null',
             $bin_dir,
             $project_root,
             $build_scripts_script,
