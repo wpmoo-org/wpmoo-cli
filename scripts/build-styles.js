@@ -55,12 +55,12 @@ createFolderIfNotExists(paths.css);
 
 const year = new Date().getFullYear();
 const banner =
-  `/*!
- * WPMoo UI Scoped Base
- * Copyright ${year} - Licensed under MIT
- * Contains portions of Pico CSS (MIT). See LICENSE-PICO.md.
- */
-`;
+  `@charset "UTF-8";\n` +
+  `/*!\n` +
+  ` * WPMoo UI Scoped Base\n` +
+  ` * Pico CSS ✨ v2.1.1 (https://picocss.com)\n` +
+  ` * Copyright 2019-${year} - Licensed under MIT\n` +
+  ` */\n`;
 
 // 1. Get scoped Pico content first.
 let scopedPicoContent = "";
@@ -68,7 +68,9 @@ try {
   const picoContent = fs.readFileSync(paths.picoScopedCss, "utf8");
   scopedPicoContent = picoContent
     .replace(/\.pico/g, ".wpmoo")
-    .replace(/--pico-/g, "--wpmoo-");
+    .replace(/--pico-/g, "--wpmoo-")
+    .replace(/^@charset "UTF-8";\s*/, "") // Remove Pico's charset
+    .replace(/\/\*![\s\S]*?\*\/(\s*)?/g, ""); // Remove Pico's banner
 } catch (e) {
   console.error(`❌ Error reading or scoping Pico CSS: ${e.message}`);
   process.exit(1);
@@ -88,18 +90,27 @@ themeColors.forEach((themeColor) => {
   const tempScssPath = path.join(paths.scss, `_temp_wpmoo_build_${themeColor}.scss`);
   fs.writeFileSync(tempScssPath, tempScssContent);
 
-          try {
-          const result = sass.compile(tempScssPath, {
-            style: "expanded",
-            loadPaths: [ targetDir, paths.scss, path.join(__dirname, "../node_modules") ],
-            quietDeps: true
-          });    let compiledCss = result.css.toString().replace(/^@charset "UTF-8";\s*/, "");
+  try {
+    const result = sass.compile(tempScssPath, {
+      style: "expanded",
+      loadPaths: [ targetDir, paths.scss, path.join(__dirname, "../node_modules") ],
+      quietDeps: true
+    });
+
+    let compiledCss = result.css.toString().replace(/^@charset "UTF-8";\s*/, "");
     compiledCss = compiledCss.replace(/\/\*![\s\S]*?\*\/(\s*)?/g, "");
 
     const finalCss = banner + scopedPicoContent + compiledCss;
 
     fs.writeFileSync(outputFilePath, finalCss);
 
+    // Minify with clean-css, preserving the license comment (banner)
+    // -O2 level optimization might reorder/remove comments, so we might need to be careful.
+    // But clean-css usually preserves "/*! ... */" comments.
+    // However, since we construct the finalCss with the banner, we should pass it to clean-css.
+    // We might need to tell clean-css to preserve the first comment or special comments.
+    // Standard behavior preserves /*! ... */
+    
     const minifiedCss = execSync(`${cleanCssCliPath} -O2`, { input: finalCss }).toString();
     fs.writeFileSync(outputMinFilePath, minifiedCss);
 
