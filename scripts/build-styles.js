@@ -13,16 +13,16 @@ if (process.env.npm_config_loglevel !== 'silent' && process.argv.length > 2) { /
 // 2. Find Sass
 let sass;
 try {
-  sass = require(path.join(__dirname, "../node_modules/sass"));
+  sass = require("sass"); // Look for sass in targetDir's node_modules or globally
 } catch (e) {
-  console.error("❌ Error: 'sass' module not found in wpmoo-cli. Please run 'npm install' in the wpmoo-cli directory.");
+  console.error("❌ Error: 'sass' module not found. Please ensure 'sass' is installed in your project's node_modules or globally. Run 'npm install' in your project directory.");
   process.exit(1);
 }
 
 // Find clean-css-cli
-const cleanCssCliPath = path.join(__dirname, "../node_modules/.bin/cleancss");
+const cleanCssCliPath = path.join(targetDir, "node_modules/.bin/cleancss");
 if (!fs.existsSync(cleanCssCliPath)) {
-  console.error("❌ Error: 'cleancss' executable not found. Please run 'npm install' in the wpmoo-cli directory.");
+  console.error("❌ Error: 'cleancss' executable not found. Please ensure 'cleancss' is installed in your project's node_modules. Run 'npm install' in your project directory.");
   process.exit(1);
 }
 
@@ -37,7 +37,7 @@ const themeColors = [
 const paths = {
   css: path.join(targetDir, "assets/css"),
   scss: path.join(targetDir, "resources/scss"),
-  picoScopedCss: path.join(__dirname, "../node_modules/@picocss/pico/css/pico.conditional.css"),
+  picoScopedCss: path.join(targetDir, "node_modules/@picocss/pico/css/pico.conditional.css"), // Adjust path
 };
 
 const createFolderIfNotExists = (foldername) => {
@@ -88,13 +88,12 @@ themeColors.forEach((themeColor) => {
   const tempScssPath = path.join(paths.scss, `_temp_wpmoo_build_${themeColor}.scss`);
   fs.writeFileSync(tempScssPath, tempScssContent);
 
-  try {
-    const result = sass.compile(tempScssPath, {
-      style: "expanded",
-      loadPaths: [ targetDir, paths.scss, path.join(__dirname, "../node_modules") ],
-      quietDeps: true
-    });
-
+      try {
+      const result = sass.compile(tempScssPath, {
+        style: "expanded",
+        loadPaths: [ targetDir, paths.scss, path.join(targetDir, "node_modules") ],
+        quietDeps: true
+      });
     let compiledCss = result.css.toString().replace(/^@charset "UTF-8";\s*/, "");
     compiledCss = compiledCss.replace(/\/\*![\s\S]*?\*\/(\s*)?/g, "");
 
