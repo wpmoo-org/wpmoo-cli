@@ -97,42 +97,41 @@ class DevCommand extends BaseCommand
         // Construct Concurrent Commands
         // We need to wrap paths in quotes to handle spaces and ensure shell interpretation.
 
-        // 1. Watch Styles
-        // chokidar 'path/to/scss/**/*.scss' -c 'node build-styles.js path/to/project'
-        $cmd_watch_styles = sprintf(
-            '"%s/chokidar" "%s/resources/scss/**/*.scss" --quiet -c "node %s %s"',
-            $bin_dir,
-            $project_root,
-            $build_styles_script,
-            $project_root
-        );
-
-        // 2. Watch Scripts
-        // chokidar 'path/to/js/**/*.js' -c 'node build-scripts.js path/to/project'
-        $cmd_watch_js = sprintf(
-            '"%s/chokidar" "%s/resources/js/**/*.js" --quiet -c "node %s %s"',
-            $bin_dir,
-            $project_root,
-            $build_scripts_script,
-            $project_root
-        );
-
-        // 3. Serve (BrowserSync)
-        // browser-sync start --proxy 'url' --files '...'
-        $files_to_watch = sprintf(
-            '%s/assets/css/*.css,%s/assets/js/*.js,%s/**/*.php',
-            $project_root,
-            $project_root,
-            $project_root
-        );
-
-        $cmd_serve = sprintf(
-            '"%s/browser-sync" start --proxy "%s" --https --startPath "/wp-admin" --no-notify --files "%s"',
-            $bin_dir,
-            $proxy_url,
-            $files_to_watch
-        );
-
+                // 1. Watch Styles
+                // chokidar 'path/to/scss/**/*.scss' -c 'node build-styles.js path/to/project'
+                $cmd_watch_styles = sprintf(
+                    '%s/chokidar "%s/resources/scss/**/*.scss" --quiet -c "node %s %s"',
+                    $bin_dir,
+                    $project_root,
+                    $build_styles_script,
+                    $project_root
+                );
+        
+                // 2. Watch Scripts
+                // chokidar 'path/to/js/**/*.js' -c 'node build-scripts.js path/to/project'
+                $cmd_watch_js = sprintf(
+                    '%s/chokidar "%s/resources/js/**/*.js" --quiet -c "node %s %s"',
+                    $bin_dir,
+                    $project_root,
+                    $build_scripts_script,
+                    $project_root
+                );
+        
+                // 3. Serve (BrowserSync)
+                // browser-sync start --proxy 'url' --files '...'
+                $files_to_watch = sprintf(
+                    '%s/assets/css/*.css,%s/assets/js/*.js,%s/**/*.php',
+                    $project_root,
+                    $project_root,
+                    $project_root
+                );
+                
+                $cmd_serve = sprintf(
+                    '%s/browser-sync start --proxy "%s" --https --startPath "/wp-admin" --no-notify --files "%s"',
+                    $bin_dir,
+                    $proxy_url,
+                    $files_to_watch
+                );
         // Combine with concurrently
         $concurrently_cmd = [
             $bin_dir . '/concurrently',
