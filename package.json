@@ -10,7 +10,7 @@
     "watch:styles": "chokidar 'resources/scss/**/*.scss' --quiet -c 'npm run build:styles'",
     "watch:js": "chokidar 'resources/js/**/*.js' --quiet -c 'npm run build:scripts'",
     "watch:php": "chokidar '**/*.php' 'index.html' --ignore 'node_modules/**' --ignore 'vendor/**' --ignore '.git/**'",
-    "serve": "browser-sync start --proxy 'https://wp-dev.local' --https --startPath '/wp-admin/admin.php?page=wpmoo-samples' --no-notify --files 'assets/css/*.css,assets/js/*.js,**/*.php'",
+    "serve": "browser-sync start --proxy 'https://wp-dev.local' --https --startPath '/wp-admin' --no-notify --files 'assets/css/*.css,assets/js/*.js,**/*.php'",
     "dev": "concurrently --kill-others --raw 'npm:watch:styles' 'npm:watch:js' 'npm:watch:php' 'npm:serve'"
   },
   "devDependencies": {

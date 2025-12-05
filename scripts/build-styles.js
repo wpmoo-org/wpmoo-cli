@@ -80,10 +80,10 @@ themeColors.forEach((themeColor) => {
   const outputMinFilePath = path.join(paths.css, `wpmoo.${themeColor}.min.css`);
 
   const tempScssContent =
-    `@use "resources/scss/config/settings" with (\n` +
+    `@use "config/settings" with (\n` +
     `  $theme-color: "${themeColor}"\n` +
     `);\n` +
-    `@use "resources/scss/wpmoo";\n`;
+    `@use "wpmoo";\n`;
   
   const tempScssPath = path.join(paths.scss, `_temp_wpmoo_build_${themeColor}.scss`);
   fs.writeFileSync(tempScssPath, tempScssContent);
@@ -91,7 +91,7 @@ themeColors.forEach((themeColor) => {
   try {
     const result = sass.compile(tempScssPath, {
       style: "expanded",
-      loadPaths: [ targetDir, path.join(__dirname, "../node_modules") ],
+      loadPaths: [ targetDir, paths.scss, path.join(__dirname, "../node_modules") ],
       quietDeps: true
     });
 
