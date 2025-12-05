@@ -46,8 +46,9 @@ class DevCommand extends BaseCommand
             return self::FAILURE;
         }
 
-        $project_root = $project['root'] ?? $this->get_cwd();
+        $project_root = $project['main_file'] ? dirname($project['main_file']) : $this->get_cwd();
         $cli_root = dirname(__DIR__, 3);
+        $bin_dir = $cli_root . '/node_modules/.bin';
 
         // Ensure internal Node.js environment is ready
         $node_env = new NodeEnvironment($this->filesystem);
@@ -56,22 +57,95 @@ class DevCommand extends BaseCommand
         }
 
         $io->writeln(sprintf('<info>Starting dev server for project:</info> %s', $project_root));
+
+        // Define script paths
+        $build_styles_script = $cli_root . '/scripts/build-styles.js';
+        $build_scripts_script = $cli_root . '/scripts/build-scripts.js';
+
         $io->note('Initial build in progress...');
 
-        // Initial Build
-        $build_process = new Process(['npm', 'run', 'build', '--silent'], $cli_root, ['TARGET_DIR' => $project_root]);
-        $build_process->run();
-        if (!$build_process->isSuccessful()) {
-            $io->error('Initial build failed.');
-            $io->writeln($build_process->getErrorOutput());
+        // Initial Build: Styles
+        $io->text('Building styles...');
+        $style_process = new Process(['node', $build_styles_script, $project_root]);
+        $style_process->run();
+        if (!$style_process->isSuccessful()) {
+            $io->error('Style build failed.');
+            $io->writeln($style_process->getErrorOutput());
+            return self::FAILURE;
+        }
+
+        // Initial Build: Scripts
+        $io->text('Building scripts...');
+        $script_process = new Process(['node', $build_scripts_script, $project_root]);
+        $script_process->run();
+        if (!$script_process->isSuccessful()) {
+            $io->error('Script build failed.');
+            $io->writeln($script_process->getErrorOutput());
             return self::FAILURE;
         }
 
         $io->success('Initial build completed.');
         $io->section('Starting watchers and BrowserSync...');
 
-        // Start dev server
-        $dev_process = new Process(['npm', 'run', 'dev'], $cli_root, ['TARGET_DIR' => $project_root]);
+        // Get configuration
+        // We need to load config for the PROJECT root, not CWD if different (though usually same)
+        // ConfigManager in BaseCommand initializes with CWD.
+        // Let's reload it for project root just in case.
+        $config_manager = new \WPMoo\CLI\Support\ConfigManager($project_root);
+        $proxy_url = $config_manager->get('dev.proxy', 'https://wp-dev.local');
+
+        // Construct Concurrent Commands
+        // We need to wrap paths in quotes to handle spaces and ensure shell interpretation.
+
+        // 1. Watch Styles
+        // chokidar 'path/to/scss/**/*.scss' -c 'node build-styles.js path/to/project'
+        $cmd_watch_styles = sprintf(
+            '"%s/chokidar" "%s/resources/scss/**/*.scss" --quiet -c "node %s %s"',
+            $bin_dir,
+            $project_root,
+            $build_styles_script,
+            $project_root
+        );
+
+        // 2. Watch Scripts
+        // chokidar 'path/to/js/**/*.js' -c 'node build-scripts.js path/to/project'
+        $cmd_watch_js = sprintf(
+            '"%s/chokidar" "%s/resources/js/**/*.js" --quiet -c "node %s %s"',
+            $bin_dir,
+            $project_root,
+            $build_scripts_script,
+            $project_root
+        );
+
+        // 3. Serve (BrowserSync)
+        // browser-sync start --proxy 'url' --files '...'
+        $files_to_watch = sprintf(
+            '%s/assets/css/*.css,%s/assets/js/*.js,%s/**/*.php',
+            $project_root,
+            $project_root,
+            $project_root
+        );
+
+        $cmd_serve = sprintf(
+            '"%s/browser-sync" start --proxy "%s" --https --startPath "/wp-admin" --no-notify --files "%s"',
+            $bin_dir,
+            $proxy_url,
+            $files_to_watch
+        );
+
+        // Combine with concurrently
+        $concurrently_cmd = [
+            $bin_dir . '/concurrently',
+            '--kill-others',
+            '--raw',
+            '--names', 'styles,scripts,serve',
+            '--prefix-colors', 'magenta,blue,green',
+            $cmd_watch_styles,
+            $cmd_watch_js,
+            $cmd_serve
+        ];
+
+        $dev_process = new Process($concurrently_cmd);
         $dev_process->setTimeout(null)->setIdleTimeout(null)->setTty(Process::isTtySupported());
 
         return $dev_process->run(function ($type, $buffer) use ($output) {
