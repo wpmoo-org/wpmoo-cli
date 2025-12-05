@@ -43,8 +43,9 @@ class NodeEnvironment
      */
     public function ensure_dependencies(SymfonyStyle $io): bool
     {
-        // 1. Check if node_modules exists.
-        if ($this->filesystem->file_exists($this->cli_root . '/node_modules')) {
+        // 1. Check if critical dependencies exist (e.g. sass).
+        // We check for the folder to ensure it's populated.
+        if ($this->filesystem->file_exists($this->cli_root . '/node_modules/sass')) {
             return true;
         }
 
