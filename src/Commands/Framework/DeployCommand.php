@@ -85,12 +85,25 @@ class DeployCommand extends BaseCommand
             return self::SUCCESS;
         }
 
-        // 2. Build assets.
-        $output->writeln('> Building assets...');
+        // 2. Build assets using the internal 'build' command.
+        $output->writeln('> Building assets using internal WPMoo build command...');
         try {
-            $this->run_process($this->get_build_command(), $output);
-        } catch (ProcessFailedException $e) {
-            throw $e;
+            $application = $this->getApplication();
+            if (! $application) {
+                $output->writeln('<error>Application instance not found to run build command.</error>');
+                return self::FAILURE;
+            }
+            $buildCommand = $application->find('build');
+            $buildInput = new ArrayInput([]); // No arguments needed for the build command itself.
+            $buildReturnCode = $buildCommand->run($buildInput, $output);
+
+            if ($buildReturnCode !== self::SUCCESS) {
+                $output->writeln('<error>WPMoo build command failed. Aborting deployment.</error>');
+                return self::FAILURE;
+            }
+        } catch (\Exception $e) { // Catch generic exception for clarity
+            $output->writeln("<error>Error running WPMoo build command: {$e->getMessage()}</error>");
+            return self::FAILURE;
         }
 
         // 3. Generate POT files.
@@ -303,20 +316,5 @@ class DeployCommand extends BaseCommand
         } else {
             $this->run_process([ 'svn', 'commit', '-m', "Tagging version {$version_string}" ], $output, false, $this->svn_path);
         }
-    }
-
-    private function get_build_command(): array
-    {
-        $cwd = $this->get_cwd();
-        if (file_exists($cwd . '/yarn.lock')) {
-            return [ 'yarn', 'build' ];
-        }
-        if (file_exists($cwd . '/pnpm-lock.yaml')) {
-            return [ 'pnpm', 'build' ];
-        }
-        if (file_exists($cwd . '/bun.lockb')) {
-            return [ 'bun', 'run', 'build' ];
-        }
-        return [ 'npm', 'run', 'build' ];
     }
 }
