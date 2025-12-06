@@ -59,20 +59,10 @@ class PotGenerator
         if ($project['type'] === 'wpmoo-framework') {
             $this->run_make_pot(
                 $wp_bin,
-                $project_root . '/framework',
+                $project_root, // Scan the entire project root
                 $project_root . '/languages/wpmoo.pot',
-                'wpmoo',
-                'vendor,node_modules',
-                $headers,
-                $outputCallback
-            );
-
-            $this->run_make_pot(
-                $wp_bin,
-                $project_root . '/src/samples',
-                $project_root . '/languages/wpmoo-samples.pot',
-                'wpmoo-samples',
-                '',
+                'wpmoo', // Use the single text domain
+                'vendor,node_modules,dist,tests', // Exclude more directories
                 $headers,
                 $outputCallback
             );
