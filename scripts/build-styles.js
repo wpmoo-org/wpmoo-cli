@@ -33,11 +33,14 @@ if (!fs.existsSync(cleanCssCliPath)) {
 
 // 3. Configuration
 const isDevMode = process.env.DEV_MODE === 'true';
-const themeColors = isDevMode ? ["amber"] : [
-  "amber", "azure", "blue", "cyan", "fuchsia", "green", "grey", "indigo",
-  "jade", "lime", "orange", "pink", "pumpkin", "purple", "red", "sand",
-  "slate", "violet", "yellow", "zinc",
-];
+const devTheme = process.env.WPMOO_DEV_THEME;
+const themeColors = isDevMode
+  ? (devTheme ? [devTheme] : ["amber"]) // If devTheme is set, use it, otherwise fallback to amber for dev mode.
+  : [
+      "amber", "azure", "blue", "cyan", "fuchsia", "green", "grey", "indigo",
+      "jade", "lime", "orange", "pink", "pumpkin", "purple", "red", "sand",
+      "slate", "violet", "yellow", "zinc",
+    ];
 
 if (!quietBuild && isDevMode && process.env.npm_config_loglevel !== 'silent') {
     console.log('[WPMoo] Dev Mode: Building only "amber" theme.');

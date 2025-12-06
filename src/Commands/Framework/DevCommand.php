@@ -58,6 +58,12 @@ class DevCommand extends BaseCommand
 
         $io->writeln(sprintf('<info>Starting dev server for project:</info> %s', $project_root));
 
+        $config_manager = new \WPMoo\CLI\Support\ConfigManager($project_root, $this->filesystem);
+        $dev_config = $config_manager->get('dev', []);
+
+        $browser_sync_config = $dev_config['browser_sync'] ?? [];
+        $dev_theme = $dev_config['theme'] ?? 'amber';
+
         // Define script paths
         $build_styles_script = $cli_root . '/scripts/build-styles.js';
         $build_scripts_script = $cli_root . '/scripts/build-scripts.js';
@@ -65,8 +71,12 @@ class DevCommand extends BaseCommand
         $io->note('Initial build in progress...');
 
         // Initial Build: Styles
-        $io->text('Building styles (Dev Mode: amber only)...');
-        $style_process = new Process(['node', $build_styles_script, $project_root], null, ['DEV_MODE' => 'true']);
+        $io->text(sprintf('Building styles (Dev Mode: %s only)...', $dev_theme));
+        $style_process = new Process(
+            ['node', $build_styles_script, $project_root],
+            null,
+            ['DEV_MODE' => 'true', 'WPMOO_DEV_THEME' => $dev_theme]
+        );
         $style_process->run();
         if (!$style_process->isSuccessful()) {
             $io->error('Style build failed.');
@@ -92,13 +102,14 @@ class DevCommand extends BaseCommand
         $proxy_url = $config_manager->get('dev.proxy', 'https://wp-dev.local');
 
         // Construct Concurrent Commands
-        
+
         // 1. Watch Styles
-        // chokidar 'path/to/scss/**/*.scss' -c 'DEV_MODE=true WPMOO_QUIET_BUILD=true node build-styles.js path/to/project' > /dev/null
+        // chokidar 'path/to/scss/**/*.scss' -c 'DEV_MODE=true WPMOO_QUIET_BUILD=true WPMOO_DEV_THEME=%s node build-styles.js path/to/project' > /dev/null
         $cmd_watch_styles = sprintf(
-            '%s/chokidar "%s/resources/scss/**/*.scss" --quiet -c "DEV_MODE=true WPMOO_QUIET_BUILD=true node %s %s" > /dev/null',
+            '%s/chokidar "%s/resources/scss/**/*.scss" --quiet -c "DEV_MODE=true WPMOO_QUIET_BUILD=true WPMOO_DEV_THEME=%s node %s %s" > /dev/null',
             $bin_dir,
             $project_root,
+            $dev_theme,
             $build_styles_script,
             $project_root
         );
@@ -114,31 +125,69 @@ class DevCommand extends BaseCommand
         );
 
         // 3. Serve (BrowserSync)
-        $files_to_watch = sprintf(
-            '%s/assets/css/*.css,%s/assets/js/*.js,%s/**/*.php',
-            $project_root,
-            $project_root,
-            $project_root
-        );
-        
-        $cmd_serve = sprintf(
-            '%s/browser-sync start --proxy "%s" --https --startPath "/wp-admin" --no-notify --files "%s"',
-            $bin_dir,
-            $proxy_url,
-            $files_to_watch
-        );
+        $cmd_serve = null;
+        $files_to_watch_array = $browser_sync_config['files'] ?? [
+            "./**/*.php",
+            "./assets/js/**/*.js",
+            "./assets/css/**/*.css",
+        ];
+        $files_to_watch_string = implode(',', array_map(function ($file) use ($project_root) {
+            return $project_root . '/' . ltrim($file, './');
+        }, $files_to_watch_array));
+
+        if (($browser_sync_config['enabled'] ?? true)) { // Default to true if not specified
+            $browser_sync_args = [
+                'start',
+                '--proxy',
+                sprintf('"%s"', $browser_sync_config['url'] ?? 'https://wp-dev.local'), // Use config URL
+                '--https',
+                '--startPath "/wp-admin"',
+            ];
+
+            // Add port if specified
+            if (isset($browser_sync_config['port'])) {
+                $browser_sync_args[] = '--port ' . $browser_sync_config['port'];
+            } else {
+                $browser_sync_args[] = '--port 3000'; // Default port
+            }
+
+            // Open browser automatically
+            if (!($browser_sync_config['open'] ?? true)) { // Default to true, add --no-open if false
+                $browser_sync_args[] = '--no-open';
+            }
+
+            // BrowserSync notification
+            if (!($browser_sync_config['notify'] ?? false)) { // Default to false, add --no-notify if false
+                $browser_sync_args[] = '--no-notify';
+            }
+
+            // Files to watch
+            $browser_sync_args[] = sprintf('--files "%s"', $files_to_watch_string);
+
+            $cmd_serve = sprintf(
+                '%s/browser-sync %s',
+                $bin_dir,
+                implode(' ', $browser_sync_args)
+            );
+        }
 
         // Combine with concurrently
         $concurrently_cmd = [
             $bin_dir . '/concurrently',
             '--kill-others',
             '--raw',
-            '--names', 'styles,scripts,serve',
-            '--prefix-colors', 'magenta,blue,green',
+            '--names', 'styles,scripts', // Names will be updated dynamically
+            '--prefix-colors', 'magenta,blue', // Prefix colors will be updated dynamically
             $cmd_watch_styles,
             $cmd_watch_js,
-            $cmd_serve
         ];
+
+        if ($cmd_serve) {
+            $concurrently_cmd[5] .= ',serve'; // Add 'serve' to --names
+            $concurrently_cmd[7] .= ',green'; // Add 'green' to --prefix-colors
+            $concurrently_cmd[] = $cmd_serve; // Add the browser-sync command
+        }
+
 
         $dev_process = new Process($concurrently_cmd);
         $dev_process->setTimeout(null)->setIdleTimeout(null)->setTty(Process::isTtySupported());
