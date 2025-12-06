@@ -183,8 +183,8 @@ class DevCommand extends BaseCommand
         ];
 
         if ($cmd_serve) {
-            $concurrently_cmd[5] .= ',serve'; // Add 'serve' to --names
-            $concurrently_cmd[7] .= ',green'; // Add 'green' to --prefix-colors
+            $concurrently_cmd[4] .= ',serve'; // Add 'serve' to --names
+            $concurrently_cmd[6] .= ',green'; // Add 'green' to --prefix-colors
             $concurrently_cmd[] = $cmd_serve; // Add the browser-sync command
         }
 
