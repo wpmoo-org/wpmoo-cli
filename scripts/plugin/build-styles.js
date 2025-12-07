@@ -80,7 +80,12 @@ if (fs.existsSync(mainScssPath)) {
     try {
         const result = sass.compile(mainScssPath, {
             style: "expanded",
-            loadPaths: [ targetDir, paths.scss, path.join(targetDir, 'vendor', 'wpmoo', 'wpmoo', 'resources', 'scss') ],
+            loadPaths: [ 
+                targetDir, 
+                paths.scss, 
+                path.join(targetDir, 'vendor', 'wpmoo', 'wpmoo', 'resources', 'scss'),
+                path.join(__dirname, '../../node_modules')
+            ],
             quietDeps: true
         });
 
