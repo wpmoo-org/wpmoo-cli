@@ -162,7 +162,7 @@ if (textDomain === 'wpmoo') {
         try {
             const result = sass.compile(mainScssPath, {
                 style: "expanded",
-                loadPaths: [ targetDir, paths.scss ], // User's main.scss should handle vendor path
+                loadPaths: [ targetDir, paths.scss, path.join(targetDir, 'vendor', 'wpmoo', 'wpmoo', 'resources', 'scss') ],
                 quietDeps: true
             });
 
