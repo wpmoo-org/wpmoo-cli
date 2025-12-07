@@ -55,8 +55,8 @@ const themeColors = isDevMode
       "slate", "violet", "yellow", "zinc",
     ];
 
-if (!quietBuild && isDevMode && process.env.npm_config_loglevel !== 'silent') {
-    console.log('[WPMoo] Dev Mode: Building only "amber" theme.');
+if (!quietBuild && isDevMode && process.env.npm_config_loglevel !== 'silent' && textDomain === 'wpmoo') {
+    console.log(`[WPMoo] Dev Mode: Building only "${devTheme || 'amber'}" theme.`);
 }
 
 const paths = {
@@ -89,71 +89,110 @@ const banner =
   ` * Copyright 2019-${year} - Licensed under MIT\n` +
   ` */\n`;
 
-// 1. Get scoped Pico content first.
+// Get scoped Pico content first.
 let scopedPicoContent = "";
 try {
   const picoContent = fs.readFileSync(paths.picoScopedCss, "utf8");
   scopedPicoContent = picoContent
     .replace(/\.pico/g, ".wpmoo")
     .replace(/--pico-/g, "--wpmoo-")
-    .replace(/^@charset "UTF-8";\s*/, "") // Remove Pico's charset
+    .replace(/^@charset \"UTF-8\";\s*/, "") // Remove Pico's charset
     .replace(/\/\*![\s\S]*?\*\/(\s*)?/g, ""); // Remove Pico's banner
 } catch (e) {
   console.error(`❌ Error reading or scoping Pico CSS: ${e.message}`);
   process.exit(1);
 }
 
-themeColors.forEach((themeColor) => {
-  const outputFileName = `wpmoo.${themeColor}.css`;
-  const outputFilePath = path.join(paths.css, outputFileName);
-  const outputMinFilePath = path.join(paths.css, `wpmoo.${themeColor}.min.css`);
+// --- Build Logic ---
 
-  const tempScssContent =
-    `@use "config/settings" with (\n` +
-    `  $theme-color: "${themeColor}"\n` +
-    `);\n` +
-    `@use "wpmoo";\n`;
-  
-  const tempScssPath = path.join(paths.temp, `_temp_wpmoo_build_${themeColor}.scss`); // Use temp dir
-  fs.writeFileSync(tempScssPath, tempScssContent);
+if (textDomain === 'wpmoo') {
+    // This is the original framework, build all themes.
+    themeColors.forEach((themeColor) => {
+        const outputFileName = `wpmoo.${themeColor}.css`;
+        const outputFilePath = path.join(paths.css, outputFileName);
+        const outputMinFilePath = path.join(paths.css, `wpmoo.${themeColor}.min.css`);
 
-  try {
-    const result = sass.compile(tempScssPath, {
-      style: "expanded",
-      loadPaths: [ targetDir, paths.scss, path.join(__dirname, "../node_modules") ],
-      quietDeps: true
+        const tempScssContent =
+            `@use "config/settings" with (\n` +
+            `  $theme-color: "${themeColor}"\n` +
+            `);\n` +
+            `@use "wpmoo";\n`;
+        
+        const tempScssPath = path.join(paths.temp, `_temp_wpmoo_build_${themeColor}.scss`);
+        fs.writeFileSync(tempScssPath, tempScssContent);
+
+        try {
+            const result = sass.compile(tempScssPath, {
+                style: "expanded",
+                loadPaths: [ targetDir, paths.scss, path.join(__dirname, "../node_modules") ],
+                quietDeps: true
+            });
+
+            let compiledCss = result.css.toString().replace(/^@charset \"UTF-8\";\s*/, "");
+            compiledCss = compiledCss.replace(/\/\*![\s\S]*?\*\/(\s*)?/g, "");
+
+            const finalCss = banner + scopedPicoContent + compiledCss;
+
+            fs.writeFileSync(outputFilePath, finalCss);
+
+            if (!isDevMode) {
+                const minifiedCss = execSync(`${cleanCssCliPath} -O2`, { input: finalCss }).toString();
+                fs.writeFileSync(outputMinFilePath, minifiedCss);
+            }
+        } catch (error) {
+            console.error(`❌ Error compiling ${outputFileName}:`, error.message);
+            process.exit(1);
+        } finally {
+            if (fs.existsSync(tempScssPath)) {
+                fs.unlinkSync(tempScssPath);
+            }
+        }
     });
+} else {
+    // This is a user project, build their main.scss
+    const mainScssPath = path.join(paths.scss, 'main.scss');
+    if (fs.existsSync(mainScssPath)) {
+        if (!quietBuild) {
+            console.log(`[WPMoo] Building custom stylesheet: ${mainScssPath}`);
+        }
+        const outputFileName = `${textDomain}.css`;
+        const outputFilePath = path.join(paths.css, outputFileName);
+        const outputMinFilePath = path.join(paths.css, `${textDomain}.min.css`);
 
-    let compiledCss = result.css.toString().replace(/^@charset "UTF-8";\s*/, "");
-    compiledCss = compiledCss.replace(/\/\*![\s\S]*?\*\/(\s*)?/g, "");
+        try {
+            const result = sass.compile(mainScssPath, {
+                style: "expanded",
+                loadPaths: [ targetDir, paths.scss ], // User's main.scss should handle vendor path
+                quietDeps: true
+            });
 
-    let finalCss = banner + scopedPicoContent + compiledCss;
+            let compiledCss = result.css.toString().replace(/^@charset \"UTF-8\";\s*/, "");
+            
+            // The user's file already imports the scoped base, so we don't add it again.
+            // We just need to scope the classes from the framework.
+            const prefix = textDomain;
+            let finalCss = compiledCss
+                .replace(/\.wpmoo/g, `.${prefix}`)
+                .replace(/--wpmoo-/g, `--${prefix}-`);
 
-    // Scope the CSS if it's for a custom plugin/theme
-    if (textDomain !== 'wpmoo') {
-        const prefix = textDomain;
-        finalCss = finalCss
-            .replace(/\.wpmoo/g, `.${prefix}`)
-            .replace(/--wpmoo-/g, `--${prefix}-`);
+            fs.writeFileSync(outputFilePath, finalCss);
+
+            // Minify with clean-css only in production mode
+            if (!isDevMode) {
+                const minifiedCss = execSync(`${cleanCssCliPath} -O2`, { input: finalCss }).toString();
+                fs.writeFileSync(outputMinFilePath, minifiedCss);
+            }
+        } catch (error) {
+            console.error(`❌ Error compiling ${outputFileName}:`, error.message);
+            process.exit(1);
+        }
+    } else {
+        if (!quietBuild) {
+            console.log(`[WPMoo] No main.scss found in ${paths.scss}. Skipping custom style build.`);
+        }
     }
+}
 
-    fs.writeFileSync(outputFilePath, finalCss);
-
-    // Minify with clean-css only in production mode
-    if (!isDevMode) {
-        const minifiedCss = execSync(`${cleanCssCliPath} -O2`, { input: finalCss }).toString();
-        fs.writeFileSync(outputMinFilePath, minifiedCss);
-    }
-
-  } catch (error) {
-    console.error(`❌ Error compiling ${outputFileName}:`, error.message);
-    process.exit(1);
-  } finally {
-    if (fs.existsSync(tempScssPath)) {
-      fs.unlinkSync(tempScssPath);
-    }
-  }
-});
 
 // Clean up temp dir if empty (optional but nice)
 try {
@@ -163,4 +202,3 @@ try {
 } catch (e) {
     // Ignore cleanup errors
 }
-
