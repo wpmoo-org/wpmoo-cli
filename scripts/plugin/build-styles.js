@@ -64,6 +64,7 @@ if (!fs.existsSync(paths.scss)) {
 
 createFolderIfNotExists(paths.css);
 
+const year = new Date().getFullYear();
 const banner =
   "@charset \"UTF-8\";\n" +
   "/*!\n" +
