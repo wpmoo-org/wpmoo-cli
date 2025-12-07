@@ -64,9 +64,10 @@ class DevCommand extends BaseCommand
         $browser_sync_config = $dev_config['browser_sync'] ?? [];
         $dev_theme = $dev_config['theme'] ?? 'amber';
 
-        // Define script paths
-        $build_styles_script = $cli_root . '/scripts/build-styles.js';
-        $build_scripts_script = $cli_root . '/scripts/build-scripts.js';
+        // Define script paths based on context
+        $context_dir = ($project['type'] === 'wpmoo-framework') ? 'framework' : 'plugin';
+        $build_styles_script = $cli_root . "/scripts/{$context_dir}/build-styles.js";
+        $build_scripts_script = $cli_root . '/scripts/common/build-scripts.js';
 
         $io->note('Initial build in progress...');
 

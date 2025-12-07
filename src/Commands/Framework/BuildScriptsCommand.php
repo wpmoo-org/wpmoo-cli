@@ -49,7 +49,7 @@ class BuildScriptsCommand extends BaseCommand
         }
 
         // 2. Locate the build script
-        $script_path = dirname(__DIR__, 3) . '/scripts/build-scripts.js';
+        $script_path = dirname(__DIR__, 3) . '/scripts/common/build-scripts.js';
 
         if (!$this->filesystem->file_exists($script_path)) {
             $io->error("Build script not found at: {$script_path}");

@@ -48,10 +48,10 @@ class BuildStylesCommand extends BaseCommand
             return 1;
         }
 
-        // 2. Locate the build script
-        // We assume we are running from src/CLI/Commands/Framework
-        // Script is in scripts/build-styles.js (relative to project root)
-        $script_path = dirname(__DIR__, 3) . '/scripts/build-styles.js';
+        // 2. Locate the build script based on context
+        $project = $this->identify_project();
+        $context_dir = ($project['type'] === 'wpmoo-framework') ? 'framework' : 'plugin';
+        $script_path = dirname(__DIR__, 3) . "/scripts/{$context_dir}/build-styles.js";
 
         if (!$this->filesystem->file_exists($script_path)) {
             $io->error("Build script not found at: {$script_path}");
