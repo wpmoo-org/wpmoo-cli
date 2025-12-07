@@ -14,14 +14,15 @@
     "dev": "concurrently --kill-others --raw 'npm:watch:styles' 'npm:watch:js' 'npm:watch:php' 'npm:serve'"
   },
   "dependencies": {
-    "sass": "^1.77.8",
-    "clean-css-cli": "^5.6.3",
+    "@picocss/pico": "^2.1.1",
     "browser-sync": "^3.0.2",
-    "concurrently": "^8.2.2",
     "chokidar-cli": "^3.0.0",
-    "replace-in-file": "^7.1.2",
+    "clean-css-cli": "^5.6.3",
+    "concurrently": "^8.2.2",
+    "js-yaml": "^4.1.1",
     "open": "^10.1.0",
-    "@picocss/pico": "^2.1.1"
+    "replace-in-file": "^7.1.2",
+    "sass": "^1.77.8"
   },
   "devDependencies": {
     "prettier": "^3.3.3",

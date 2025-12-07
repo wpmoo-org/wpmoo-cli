@@ -1,6 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const { execSync } = require('child_process');
+const yaml = require('js-yaml');
 
 // 1. Determine the Project Root (Target)
 const targetDir = process.argv[2] 
@@ -34,6 +35,18 @@ if (!fs.existsSync(cleanCssCliPath)) {
 // 3. Configuration
 const isDevMode = process.env.DEV_MODE === 'true';
 const devTheme = process.env.WPMOO_DEV_THEME;
+
+let textDomain = 'wpmoo'; // Default
+try {
+    const configFile = fs.readFileSync(path.join(targetDir, 'wpmoo-config.yml'), 'utf8');
+    const config = yaml.load(configFile);
+    if (config && config.project && config.project.text_domain) {
+        textDomain = config.project.text_domain;
+    }
+} catch (e) {
+    // Config file might not exist, proceed with default
+}
+
 const themeColors = isDevMode
   ? (devTheme ? [devTheme] : ["amber"]) // If devTheme is set, use it, otherwise fallback to amber for dev mode.
   : [
@@ -114,7 +127,15 @@ themeColors.forEach((themeColor) => {
     let compiledCss = result.css.toString().replace(/^@charset "UTF-8";\s*/, "");
     compiledCss = compiledCss.replace(/\/\*![\s\S]*?\*\/(\s*)?/g, "");
 
-    const finalCss = banner + scopedPicoContent + compiledCss;
+    let finalCss = banner + scopedPicoContent + compiledCss;
+
+    // Scope the CSS if it's for a custom plugin/theme
+    if (textDomain !== 'wpmoo') {
+        const prefix = textDomain;
+        finalCss = finalCss
+            .replace(/\.wpmoo/g, `.${prefix}`)
+            .replace(/--wpmoo-/g, `--${prefix}-`);
+    }
 
     fs.writeFileSync(outputFilePath, finalCss);
 
