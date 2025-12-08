@@ -185,6 +185,25 @@ class DeployCommand extends BaseCommand
             }
         }
 
+        // For WPMoo framework distribution, we still need to include the autoloader for proper functionality
+        if ($project['type'] === 'wpmoo-framework') {
+            $source_autoload_path = $this->get_cwd() . '/vendor/autoload.php';
+            $target_vendor_path = $build_path . '/vendor';
+
+            if (file_exists($source_autoload_path)) {
+                $this->run_process([ 'mkdir', '-p', $target_vendor_path ], $output);
+
+                // Copy the autoloader files
+                $this->run_process([ 'cp', $source_autoload_path, $target_vendor_path . '/' ], $output);
+
+                // Copy the composer directory with autoloader files
+                $source_composer_path = $this->get_cwd() . '/vendor/composer';
+                if (is_dir($source_composer_path)) {
+                    $this->run_process([ 'cp', '-r', $source_composer_path, $target_vendor_path . '/' ], $output);
+                }
+            }
+        }
+
         if (! $input->getOption('build-only')) {
             // 8. Handle SVN.
             $this->handle_svn($output);
