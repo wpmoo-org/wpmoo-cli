@@ -90,7 +90,7 @@ class ConfigManager
             $full_path = $config_dir . '/' . $config_file;
             if ($this->filesystem->file_exists($full_path)) {
                 $file_config = $this->load_yaml_file($full_path);
-                $this->config = array_merge_recursive_distinct($this->config, $file_config);
+                $this->config = $this->array_merge_recursive_distinct($this->config, $file_config);
             }
         }
     }
