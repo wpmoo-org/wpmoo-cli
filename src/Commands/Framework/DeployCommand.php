@@ -337,6 +337,7 @@ class DeployCommand extends BaseCommand
         // Get configuration for vendor packages
         $config_include = $this->config_manager->get('dist.vendor_packages.include', []);
         $config_exclude = $this->config_manager->get('dist.vendor_packages.exclude', []);
+        $selective_exclusion = $this->config_manager->get('dist.vendor_packages.selective_exclusion', []);
 
         // Check if we should handle wpmoo framework specially
         $wpmoo_handling = $this->config_manager->get('dist.vendor_packages.wpmoo_handling', 'include'); // Options: 'include', 'exclude', 'separate'
@@ -382,32 +383,30 @@ class DeployCommand extends BaseCommand
                 if ($should_copy) {
                     $vendor_dir = $source . '/' . $vendor_namespace . '/' . $vendor_name;
 
+                    // Check for selective exclusion rules for this specific package
+                    $selective_exclusion_rules = [];
+                    if (isset($selective_exclusion[$full_package_name])) {
+                        $selective_exclusion_rules = $selective_exclusion[$full_package_name];
+                    }
+
+                    // Get ignored files for this package from .gitattributes
+                    $ignored_files = [];
                     if (is_dir($vendor_dir)) {
-                        // Get ignored files for this package
                         $ignored_files = $this->get_ignored_files_from_gitattributes($vendor_dir);
+                    }
 
-                        $should_exclude = false;
-                        foreach ($ignored_files as $pattern) {
-                            if ($this->fnmatch($pattern, $relative_path)) {
-                                $should_exclude = true;
-                                break;
-                            }
-                        }
+                    // Combine .gitattributes rules with selective exclusion rules
+                    $all_exclusion_rules = array_merge($ignored_files, $selective_exclusion_rules);
 
-                        if (!$should_exclude) {
-                            $target_path = $target . '/' . $relative_path;
-                            if ($item->isDir()) {
-                                if (!is_dir($target_path)) {
-                                    mkdir($target_path, 0755, true);
-                                }
-                            } else {
-                                copy($item->getPathname(), $target_path);
-                            }
-                        } else {
-                            // File excluded by .gitattributes
+                    $should_exclude = false;
+                    foreach ($all_exclusion_rules as $pattern) {
+                        if ($this->fnmatch($pattern, $relative_path)) {
+                            $should_exclude = true;
+                            break;
                         }
-                    } else {
-                        // If we can't identify the package directory, copy the file anyway
+                    }
+
+                    if (!$should_exclude) {
                         $target_path = $target . '/' . $relative_path;
                         if ($item->isDir()) {
                             if (!is_dir($target_path)) {
@@ -416,19 +415,34 @@ class DeployCommand extends BaseCommand
                         } else {
                             copy($item->getPathname(), $target_path);
                         }
+                    } else {
+                        // File excluded by .gitattributes or selective exclusion rules
                     }
                 } else {
                     // Package excluded by configuration or special wpmoo handling
                 }
             } else {
                 // If path doesn't match vendor structure, just copy
-                $target_path = $target . '/' . $relative_path;
-                if ($item->isDir()) {
-                    if (!is_dir($target_path)) {
-                        mkdir($target_path, 0755, true);
+                // Also check global exclusion patterns
+                $global_exclusion_patterns = $this->config_manager->get('dist.exclude_patterns', []);
+                $should_exclude = false;
+
+                foreach ($global_exclusion_patterns as $pattern) {
+                    if ($this->fnmatch($pattern, $relative_path)) {
+                        $should_exclude = true;
+                        break;
                     }
-                } else {
-                    copy($item->getPathname(), $target_path);
+                }
+
+                if (!$should_exclude) {
+                    $target_path = $target . '/' . $relative_path;
+                    if ($item->isDir()) {
+                        if (!is_dir($target_path)) {
+                            mkdir($target_path, 0755, true);
+                        }
+                    } else {
+                        copy($item->getPathname(), $target_path);
+                    }
                 }
             }
         }

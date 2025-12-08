@@ -9,7 +9,7 @@ use WPMoo\CLI\Support\Filesystem;
 // Added
 
 /**
- * Manages project configuration from a wpmoo-config.yml file.
+ * Manages project configuration from multiple config files.
  *
  * @package WPMoo\CLI\Support
  * @since 0.1.0
@@ -44,26 +44,95 @@ class ConfigManager
     }
 
     /**
-     * Finds and loads the wpmoo-config.yml file.
+     * Finds and loads configuration from multiple config files.
      *
      * @param string $start_path The directory to start searching from.
      * @return void
      */
     private function load_config(string $start_path): void
     {
-        $config_file = $this->find_config_file($start_path);
+        $this->project_root = $start_path;
 
-        if ($config_file) {
-            $this->project_root = dirname($config_file);
-            try {
-                // Use Filesystem to get file contents.
-                $content = $this->filesystem->get_file_contents($config_file);
-                $this->config = Yaml::parse($content) ?? []; // Modified
-            } catch (ParseException $e) {
-                // Handle error if YAML is invalid.
-                $this->config = [];
+        // Load the main wpmoo-config.yml file (for backwards compatibility)
+        $main_config_file = $this->find_main_config_file($start_path);
+        if ($main_config_file) {
+            $this->project_root = dirname($main_config_file);
+            $this->config = $this->load_yaml_file($main_config_file);
+        }
+
+        // Load wpmoo-config directory files if they exist
+        $wpmoo_config_dir = $this->project_root . '/wpmoo-config';
+        if ($this->filesystem->file_exists($wpmoo_config_dir) && is_dir($wpmoo_config_dir)) {
+            $this->load_config_directory($wpmoo_config_dir);
+        }
+
+        // Also check for 'config' directory for potential future compatibility
+        $config_dir = $this->project_root . '/config';
+        if ($this->filesystem->file_exists($config_dir) && is_dir($config_dir)) {
+            $this->load_config_directory($config_dir);
+        }
+    }
+
+    /**
+     * Loads configuration from the config directory.
+     *
+     * @param string $config_dir The config directory path.
+     * @return void
+     */
+    private function load_config_directory(string $config_dir): void
+    {
+        $config_files = [
+            'wpmoo-settings.yml', // Main settings file
+            'deploy.yml',         // Deployment settings
+        ];
+
+        foreach ($config_files as $config_file) {
+            $full_path = $config_dir . '/' . $config_file;
+            if ($this->filesystem->file_exists($full_path)) {
+                $file_config = $this->load_yaml_file($full_path);
+                $this->config = array_merge_recursive_distinct($this->config, $file_config);
             }
         }
+    }
+
+    /**
+     * Loads a YAML file and returns its content as an array.
+     *
+     * @param string $file_path The path to the YAML file.
+     * @return array The YAML content as an array.
+     */
+    private function load_yaml_file(string $file_path): array
+    {
+        try {
+            $content = $this->filesystem->get_file_contents($file_path);
+            return Yaml::parse($content) ?? [];
+        } catch (ParseException $e) {
+            // Handle error if YAML is invalid.
+            return [];
+        }
+    }
+
+    /**
+     * Recursively merge arrays, with values from the right overriding values from the left.
+     * This is similar to array_merge_recursive but preserves string values instead of merging them into arrays.
+     *
+     * @param array $array1 Left array to merge.
+     * @param array $array2 Right array to merge.
+     * @return array Merged array.
+     */
+    private function array_merge_recursive_distinct(array $array1, array $array2): array
+    {
+        $merged = $array1;
+
+        foreach ($array2 as $key => $value) {
+            if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
+                $merged[$key] = $this->array_merge_recursive_distinct($merged[$key], $value);
+            } else {
+                $merged[$key] = $value;
+            }
+        }
+
+        return $merged;
     }
 
     /**
@@ -72,7 +141,7 @@ class ConfigManager
      * @param string $start_path
      * @return string|null The path to the config file or null if not found.
      */
-    private function find_config_file(string $start_path): ?string
+    private function find_main_config_file(string $start_path): ?string
     {
         $current_dir = $start_path;
         while ($current_dir && $current_dir !== dirname($current_dir)) {
