@@ -12,7 +12,7 @@ const targetDir = process.argv[2]
 const quietBuild = process.env.WPMOO_QUIET_BUILD === 'true';
 
 if (!quietBuild && process.env.npm_config_loglevel !== 'silent' && process.argv.length > 2) { // Check if TARGET_DIR was provided as an argument
-  console.log(`[WPMoo] Building styles for: ${targetDir}`);
+    console.log(`[WPMoo] Building styles for: ${targetDir}`);
 }
 
 // 2. Find Sass
@@ -34,25 +34,21 @@ if (!fs.existsSync(cleanCssCliPath)) {
 
 // 3. Configuration
 const isDevMode = process.env.DEV_MODE === 'true';
-const devTheme = process.env.WPMOO_DEV_THEME;
 
-const themeColors = isDevMode
-  ? (devTheme ? [devTheme] : ["amber"]) // If devTheme is set, use it, otherwise fallback to amber for dev mode.
-  : [
-    "amber", "azure", "blue", "cyan", "fuchsia", "green", "grey", "indigo",
-    "jade", "lime", "orange", "pink", "pumpkin", "purple", "red", "sand",
-    "slate", "violet", "yellow", "zinc",
-  ];
-
-if (!quietBuild && isDevMode && process.env.npm_config_loglevel !== 'silent') {
-  console.log(`[WPMoo] Dev Mode: Building only "${devTheme || 'amber'}" theme.`);
+let textDomain = 'wpmoo'; // Default
+try {
+    const configFile = fs.readFileSync(path.join(targetDir, 'wpmoo-config.yml'), 'utf8');
+    const config = yaml.load(configFile);
+    if (config && config.project && config.project.text_domain) {
+        textDomain = config.project.text_domain;
+    }
+} catch (e) {
+    // Config file might not exist, proceed with default
 }
 
 const paths = {
   css: path.join(targetDir, "assets/css"),
   scss: path.join(targetDir, "resources/scss"),
-  temp: path.join(targetDir, ".wpmoo-temp"),
-  picoScopedCss: path.join(__dirname, "../../node_modules/@picocss/pico/css/pico.conditional.css"),
 };
 
 const createFolderIfNotExists = (foldername) => {
@@ -67,82 +63,54 @@ if (!fs.existsSync(paths.scss)) {
 }
 
 createFolderIfNotExists(paths.css);
-createFolderIfNotExists(paths.temp); // Create temp dir
 
-const year = new Date().getFullYear();
-const banner =
-  "@charset \"UTF-8\";\n" +
-  "/*!\n" +
-  " * WPMoo UI Scoped Base\n" +
-  " * Pico CSS ✨ v2.1.1 (https://picocss.com)\n" +
-  " * Copyright 2019-" + year + " - Licensed under MIT\n" +
-  " */\n";
-
-// Get scoped Pico content first.
-let scopedPicoContent = "";
-try {
-  const picoContent = fs.readFileSync(paths.picoScopedCss, "utf8");
-  scopedPicoContent =
-    picoContent
-      .replace(/\.pico/g, ".wpmoo")
-      .replace(/--pico-/g, "--wpmoo-")
-      .replace(/^@charset \"UTF-8\";\s*/, "") // Remove Pico's charset
-      .replace(/\/\*![\s\S]*?\*\/(\s*)?/g, ""); // Remove Pico's banner
-} catch (e) {
-  console.error(`❌ Error reading or scoping Pico CSS: ${e.message}`);
-  process.exit(1);
-}
 
 // --- Build Logic ---
-// This is the original framework, build all themes.
-themeColors.forEach((themeColor) => {
-  const outputFileName = `wpmoo.${themeColor}.css`;
-  const outputFilePath = path.join(paths.css, outputFileName);
-  const outputMinFilePath = path.join(paths.css, `wpmoo.${themeColor}.min.css`);
 
-  const tempScssContent =
-    "@use \"config/settings\" with (\n" +
-    `  $theme-color: \"${themeColor}\"\n` +
-    ");\n" +
-    "@use \"wpmoo\";\n";
-
-  const tempScssPath = path.join(paths.temp, `_temp_wpmoo_build_${themeColor}.scss`);
-  fs.writeFileSync(tempScssPath, tempScssContent);
-
-  try {
-    const result = sass.compile(tempScssPath, {
-      style: "expanded",
-      loadPaths: [targetDir, paths.scss, path.join(__dirname, "../../node_modules")],
-      quietDeps: true
-    });
-
-    let compiledCss = result.css.toString().replace(/^@charset \"UTF-8\";\s*/, "");
-    compiledCss = compiledCss.replace(/\/\*![\s\S]*?\*\/(\s*)?/g, "");
-
-    const finalCss = banner + scopedPicoContent + compiledCss;
-
-    fs.writeFileSync(outputFilePath, finalCss);
-
-    if (!isDevMode) {
-      const minifiedCss = execSync(`${cleanCssCliPath} -O2`, { input: finalCss }).toString();
-      fs.writeFileSync(outputMinFilePath, minifiedCss);
+// This is a user project, build their main.scss
+const mainScssPath = path.join(paths.scss, 'main.scss');
+if (fs.existsSync(mainScssPath)) {
+    if (!quietBuild) {
+        console.log(`[WPMoo] Building custom stylesheet: ${mainScssPath}`);
     }
-  } catch (error) {
-    console.error(`❌ Error compiling ${outputFileName}:`, error.message);
-    process.exit(1);
-  } finally {
-    if (fs.existsSync(tempScssPath)) {
-      fs.unlinkSync(tempScssPath);
+    const outputFileName = `${textDomain}.css`;
+    const outputFilePath = path.join(paths.css, outputFileName);
+    const outputMinFilePath = path.join(paths.css, `${textDomain}.min.css`);
+
+    try {
+        const result = sass.compile(mainScssPath, {
+            style: "expanded",
+            loadPaths: [
+                targetDir,
+                paths.scss,
+                path.join(targetDir, 'vendor', 'wpmoo', 'wpmoo', 'resources', 'scss'),
+                path.join(__dirname, '../../node_modules')
+            ],
+            quietDeps: true
+        });
+
+        let compiledCss = result.css.toString().replace(/^@charset "UTF-8";\s*/, "");
+
+        // The user's file already imports the scoped base, so we don't add it again.
+        // We just need to scope the classes from the framework.
+        const prefix = textDomain;
+        let finalCss = compiledCss
+            .replace(/\.wpmoo/g, `.${prefix}`)
+            .replace(/--wpmoo-/g, `--${prefix}-`);
+
+        fs.writeFileSync(outputFilePath, finalCss);
+
+        // Minify with clean-css only in production mode
+        if (!isDevMode) {
+            const minifiedCss = execSync(`${cleanCssCliPath} -O2`, { input: finalCss }).toString();
+            fs.writeFileSync(outputMinFilePath, minifiedCss);
+        }
+    } catch (error) {
+        console.error(`❌ Error compiling ${outputFileName}:`, error.message);
+        process.exit(1);
     }
-  }
-});
-
-
-// Clean up temp dir if empty (optional but nice)
-try {
-  if (fs.existsSync(paths.temp) && fs.readdirSync(paths.temp).length === 0) {
-    fs.rmdirSync(paths.temp);
-  }
-} catch (e) {
-  // Ignore cleanup errors
+} else {
+    if (!quietBuild) {
+        console.log(`[WPMoo] No main.scss found in ${paths.scss}. Skipping custom style build.`);
+    }
 }
