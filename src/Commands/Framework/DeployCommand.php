@@ -29,7 +29,8 @@ class DeployCommand extends BaseCommand
     {
         $this->setName('deploy')
             ->setDescription('Prepares a new release: builds assets, bumps versions, and tags the release for deployment.')
-            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Perform a dry run without committing or tagging.');
+            ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Perform a dry run without committing or tagging.')
+            ->addOption('build-only', null, InputOption::VALUE_NONE, 'Only build the distributable package in a `dist` folder and exit.');
     }
 
     public function handle_execute(InputInterface $input, OutputInterface $output): int
@@ -104,61 +105,122 @@ class DeployCommand extends BaseCommand
         $output->writeln("> Bumping version to {$new_version}...");
         $version_manager->update_version($project, $new_version, $output);
 
-                // 6. Commit all changes.
+        // If --build-only is specified, create the distributable package and exit.
+        if ($input->getOption('build-only')) {
+            // 7. Create a clean build.
+            $build_path = $this->get_cwd() . '/dist';
+            $output->writeln("> Creating a clean build in {$build_path}...");
+            if (is_dir($build_path)) {
+                $this->run_process([ 'rm', '-rf', $build_path ], $output);
+            }
+            $this->run_process([ 'mkdir', $build_path ], $output);
+            $this->run_shell_command_wrapper('git archive HEAD | tar -x -C ' . escapeshellarg($build_path), $output, true);
 
-                $output->writeln('> Committing all changes...');
+            // Explicitly copy composer.json as git archive might ignore it due to .gitattributes
+            if (file_exists($this->get_cwd() . '/composer.json')) {
+                copy($this->get_cwd() . '/composer.json', $build_path . '/composer.json');
+            }
 
-        if (!$input->getOption('dry-run')) {
-            $this->run_process([ 'git', 'add', '.' ], $output);
+            // After git archive, copy built assets if they exist
+            $assetsPath = $this->get_cwd() . '/assets';
+            if (is_dir($assetsPath)) {
+                $this->run_process([ 'cp', '-r', $assetsPath, $build_path . '/' ], $output);
+            }
 
-            $this->run_process([ 'git', 'commit', '-m', "chore(release): Build and bump version to {$new_version}" ], $output);
-        } else {
-            $output->writeln('<comment>DRY RUN: Skipping Git commit.</comment>');
-        }
+            // Logic for plugins
+            if ($project['type'] === 'wpmoo-plugin') {
+                $output->writeln('> Preparing production dependencies for plugin...');
+                $build_composer_path = $build_path . '/composer.json';
+                if (file_exists($build_composer_path)) {
+                    $composer_data = json_decode(file_get_contents($build_composer_path), true);
+                    unset($composer_data['require']['wpmoo/wpmoo'], $composer_data['repositories'], $composer_data['scripts']);
+                    file_put_contents($build_composer_path, json_encode($composer_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                }
+                $this->run_process(['composer', 'install', '--no-dev', '--optimize-autoloader'], $output, false, $build_path);
+                $this->cleanup_composer_files($build_path, $output);
 
+                $output->writeln('> Bundling WPMoo framework into wpmoo-core...');
+                $wpmoo_core_path = $build_path . '/wpmoo-core';
+                $this->run_process(['mkdir', '-p', $wpmoo_core_path], $output);
+                $source_wpmoo_path = $this->get_cwd() . '/vendor/wpmoo/wpmoo';
+                if (is_dir($source_wpmoo_path)) {
+                    $this->run_shell_command_wrapper('cd ' . escapeshellarg($source_wpmoo_path) . ' && git archive HEAD | tar -x -C ' . escapeshellarg($wpmoo_core_path), $output, true);
+                    $core_composer_path = $wpmoo_core_path . '/composer.json';
+                    if (file_exists($core_composer_path)) {
+                        $core_composer_data = json_decode(file_get_contents($core_composer_path), true);
+                        unset($core_composer_data['require-dev'], $core_composer_data['repositories'], $core_composer_data['scripts']);
+                        file_put_contents($core_composer_path, json_encode($core_composer_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                    }
+                    $this->run_process(['composer', 'install', '--no-dev', '--optimize-autoloader'], $output, false, $wpmoo_core_path);
+                    $this->cleanup_composer_files($wpmoo_core_path, $output);
+                }
+            }
 
-
-                // 7. Tag the release.
-
-                $output->writeln("> Tagging release v{$new_version}...");
-
-        if (!$input->getOption('dry-run')) {
-            $this->run_process(['git', 'tag', 'v' . $new_version], $output);
-        } else {
-            $output->writeln('<comment>DRY RUN: Skipping Git tag.</comment>');
-        }
-
-
-
-                // 8. Push commit and tags to origin.
-
-                $output->writeln('> Pushing Git commit and tags to origin...');
-
-        if (! $input->getOption('dry-run')) {
-            $this->run_process([ 'git', 'push', 'origin', 'HEAD', '--follow-tags' ], $output);
+            // Logic for framework
+            if ($project['type'] === 'wpmoo-framework') {
+                $output->writeln('> Preparing production dependencies for framework...');
+                $build_composer_path = $build_path . '/composer.json';
+                if (file_exists($build_composer_path)) {
+                    $composer_data = json_decode(file_get_contents($build_composer_path), true);
+                    unset($composer_data['require-dev'], $composer_data['repositories'], $composer_data['scripts']);
+                    file_put_contents($build_composer_path, json_encode($composer_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+                }
+                $this->run_process(['composer', 'install', '--no-dev', '--optimize-autoloader'], $output, false, $build_path);
+                $this->cleanup_composer_files($build_path, $output);
+            }
 
             $output->writeln('');
-
-            $output->writeln('<success>Release preparation complete. Pushed to origin to trigger deployment workflow.</success>');
+            $output->writeln('<success>Build complete!</success>');
+            $output->writeln('The distributable package is located in the <info>dist</info> directory.');
+            return self::SUCCESS;
         } else {
-            $output->writeln('<comment>DRY RUN: Skipping Git push.</comment>');
+            // 6. Commit all changes.
+            $output->writeln('> Committing all changes...');
+            if (!$input->getOption('dry-run')) {
+                $this->run_process([ 'git', 'add', '.' ], $output);
+                $this->run_process([ 'git', 'commit', '-m', "chore(release): Build and bump version to {$new_version}" ], $output);
+            } else {
+                $output->writeln('<comment>DRY RUN: Skipping Git commit.</comment>');
+            }
+
+            // 7. Tag the release.
+            $output->writeln("> Tagging release v{$new_version}...");
+            if (!$input->getOption('dry-run')) {
+                $this->run_process(['git', 'tag', 'v' . $new_version], $output);
+            } else {
+                $output->writeln('<comment>DRY RUN: Skipping Git tag.</comment>');
+            }
+
+            // 8. Push commit and tags to origin.
+            $output->writeln('> Pushing Git commit and tags to origin...');
+            if (! $input->getOption('dry-run')) {
+                $this->run_process([ 'git', 'push', 'origin', 'HEAD', '--follow-tags' ], $output);
+                $output->writeln('');
+                $output->writeln('<success>Release preparation complete. Pushed to origin to trigger deployment workflow.</success>');
+            } else {
+                $output->writeln('<comment>DRY RUN: Skipping Git push.</comment>');
+            }
         }
 
-
-
-                return self::SUCCESS;
+        return self::SUCCESS;
     }
 
-
+    private function cleanup_composer_files(string $path, OutputInterface $output)
+    {
+        $output->writeln('> Cleaning up Composer files from distributable...');
+        if (file_exists($path . '/composer.json')) {
+            unlink($path . '/composer.json');
+        }
+        if (file_exists($path . '/composer.lock')) {
+            unlink($path . '/composer.lock');
+        }
+    }
 
     private function run_process(array $command, OutputInterface $output, bool $quiet = false, ?string $cwd = null, array $env = []): void
     {
-
         $process = new Process($command, $cwd, $env);
-
         $process->mustRun(
             function ($type, $buffer) use ($output, $quiet) {
-
                 if (! $quiet) {
                     $output->write($buffer);
                 }
@@ -166,16 +228,11 @@ class DeployCommand extends BaseCommand
         );
     }
 
-
-
     private function run_shell_command_wrapper(string $command, OutputInterface $output, bool $quiet = false, ?string $cwd = null)
     {
-
         $process = Process::fromShellCommandline($command, $cwd);
-
         $process->mustRun(
             function ($type, $buffer) use ($output, $quiet) {
-
                 if (! $quiet) {
                     $output->write($buffer);
                 }
