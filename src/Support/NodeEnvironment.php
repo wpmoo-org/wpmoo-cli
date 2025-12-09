@@ -51,15 +51,32 @@ class NodeEnvironment
 
         // 2. Check if package.json exists.
         if (!$this->filesystem->file_exists($project_root . '/package.json')) {
-            $io->error('No `package.json` found in project root. Run `npm init` or `npm create wpmoo` to set up.');
+            $io->error('No `package.json` found in project root. Run `npm init` or use `create-wpmoo` to set up a new project.');
             return false;
         }
 
         // 3. Prompt user to install dependencies.
-        $io->warning('Node.js dependencies are missing in the project root.');
-        $io->text('Please run the following command to install them:');
-        $io->listing(['npm install']);
+        $io->warning('Node.js dependencies are missing or incomplete in the project root.');
+        if ($io->confirm('Do you want to run `npm install` now?', true)) {
+            $io->text('> Running `npm install`...');
 
-        return false;
+            $process = new Process(['npm', 'install'], $project_root);
+            $process->setTimeout(300); // 5 minutes timeout
+
+            try {
+                $process->mustRun(function ($type, $buffer) use ($io) {
+                    $io->write($buffer);
+                });
+                $io->success('Node.js dependencies installed successfully.');
+                return true; // Dependencies are now installed, proceed with the build.
+            } catch (ProcessFailedException $e) {
+                $io->error('`npm install` failed. Please run it manually to see the error.');
+                $io->writeln($e->getMessage());
+                return false;
+            }
+        } else {
+            $io->text('Please run `npm install` manually before proceeding.');
+            return false; // User chose not to install.
+        }
     }
 }
