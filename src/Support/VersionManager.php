@@ -104,18 +104,7 @@ class VersionManager
             $file_content = file_get_contents($main_file);
             $regex_pattern = '/^([ \t\/*#@]*Version:\s*)(.*)$/m';
             $replacement = '${1}' . $new_version_string;
-
-            // DEBUG: Output values before preg_replace for main_file
-            $output->writeln("DEBUG: Main File Content (first 500 chars): " . substr($file_content, 0, 500));
-            $output->writeln("DEBUG: Main File Regex: " . $regex_pattern);
-            $output->writeln("DEBUG: Main File Replacement: " . $replacement);
-
             $new_file_content = preg_replace($regex_pattern, $replacement, $file_content, -1, $count);
-
-            // DEBUG: Output values after preg_replace for main_file
-            $output->writeln("DEBUG: Main File New Content (first 500 chars): " . substr($new_file_content, 0, 500));
-            $output->writeln("DEBUG: Main File Replacement Count: " . $count);
-            $output->writeln("DEBUG: Main File Original Content === New Content: " . ($new_file_content === $file_content ? 'true' : 'false'));
 
             if ($count > 0) { // Check if a replacement was actually made
                 if (file_put_contents($main_file, $new_file_content) !== false) {
@@ -134,18 +123,7 @@ class VersionManager
             $file_content = file_get_contents($readme_file);
             $regex_pattern = '/^(Stable tag:\s*)(.*)$/mi';
             $replacement = '${1}' . $new_version_string;
-
-            // DEBUG: Output values before preg_replace for readme_file
-            $output->writeln("DEBUG: Readme File Content (first 500 chars): " . substr($file_content, 0, 500));
-            $output->writeln("DEBUG: Readme File Regex: " . $regex_pattern);
-            $output->writeln("DEBUG: Readme File Replacement: " . $replacement);
-
             $new_file_content = preg_replace($regex_pattern, $replacement, $file_content, -1, $count);
-
-            // DEBUG: Output values after preg_replace for readme_file
-            $output->writeln("DEBUG: Readme File New Content (first 500 chars): " . substr($new_file_content, 0, 500));
-            $output->writeln("DEBUG: Readme File Replacement Count: " . $count);
-            $output->writeln("DEBUG: Readme File Original Content === New Content: " . ($new_file_content === $file_content ? 'true' : 'false'));
 
             if ($count > 0) { // Check if a replacement was actually made
                 if (file_put_contents($readme_file, $new_file_content) !== false) {
@@ -158,7 +136,7 @@ class VersionManager
                 $output->writeln("<comment>Could not find stable tag line in {$readme_file}, skipping.</comment>");
             }
         }
-        return $update_success;
+                return $update_success;
     }
 
     public function is_valid_version(string $version): bool
