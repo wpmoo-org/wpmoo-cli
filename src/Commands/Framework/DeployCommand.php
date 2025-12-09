@@ -25,16 +25,6 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
  */
 class DeployCommand extends BaseCommand
 {
-    /**
-     * @var string The local path for the SVN repository checkout.
-     */
-    private $svn_path;
-
-    /**
-     * @var string The SVN repository URL.
-     */
-    private $svn_url; // Will be set based on plugin name during initialization.
-
     protected function configure()
     {
         $this->setName('deploy')
@@ -48,15 +38,6 @@ class DeployCommand extends BaseCommand
         if ($project['type'] !== 'wpmoo-framework' && $project['type'] !== 'wpmoo-plugin') {
             $output->writeln('<error>The deploy command can only be run from the root of a WPMoo framework project or a WPMoo-based plugin.</error>');
             return self::FAILURE;
-        }
-
-        $this->svn_path = sys_get_temp_dir() . '/wpmoo-svn';
-        if ($input->getOption('svn-url')) {
-            $this->svn_url = $input->getOption('svn-url');
-        } else {
-            // Set default SVN URL based on the plugin name if not provided
-            $pluginName = basename($this->get_cwd());
-            $this->svn_url = 'https://plugins.svn.wordpress.org/' . $pluginName . '/';
         }
 
         $output->writeln('<info>Preparing for deployment...</info>');
