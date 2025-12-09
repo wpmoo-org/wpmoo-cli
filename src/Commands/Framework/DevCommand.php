@@ -23,7 +23,7 @@ class DevCommand extends BaseCommand
 
     protected function configure()
     {
-        $this->setDescription('Starts a development server with live reloading and asset compilation for WPMoo projects.')
+        $this->setDescription('Starts a development server with live reloading.')
             ->setAliases(['watch'])
             ->setHelp('This command watches for changes in SCSS, JS, and PHP files, compiles assets, and serves the project via BrowserSync.');
     }

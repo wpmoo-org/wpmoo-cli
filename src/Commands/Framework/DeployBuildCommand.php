@@ -19,7 +19,7 @@ class DeployBuildCommand extends BaseCommand
     protected function configure()
     {
         $this->setName('deploy:build')
-            ->setDescription('Builds a clean, distributable package in the `dist` directory.');
+            ->setDescription('Package in the `dist` directory.');
     }
 
     public function handle_execute(InputInterface $input, OutputInterface $output): int
