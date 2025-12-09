@@ -105,7 +105,7 @@ class ConfigManager
         if ($this->filesystem->file_exists($current_dir . '/wpmoo-config.yml')) {
             return $current_dir;
         }
-         if ($this->filesystem->file_exists($current_dir . '/wpmoo-config/wpmoo-settings.yml')) {
+        if ($this->filesystem->file_exists($current_dir . '/wpmoo-config/wpmoo-settings.yml')) {
             return $current_dir;
         }
 

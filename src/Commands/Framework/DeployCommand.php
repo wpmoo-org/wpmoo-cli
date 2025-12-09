@@ -145,63 +145,48 @@ class DeployCommand extends BaseCommand
             $this->run_process([ 'cp', '-r', $assetsPath, $build_path . '/' ], $output);
         }
 
-        // For WPMoo-based plugins, include the WPMoo framework separately to avoid dependency conflicts
+        // For WPMoo-based plugins, handle dependencies and include the framework separately.
         if ($project['type'] === 'wpmoo-plugin') {
-            $output->writeln('> Including WPMoo framework separately for WPMoo-based plugin...');
+            $output->writeln('> Preparing production dependencies for plugin...');
 
-            // Create the wpmoo-core directory in the build
+            // Modify composer.json in the build to remove the WPMoo framework dependency,
+            // as it will be bundled separately.
+            $build_composer_path = $build_path . '/composer.json';
+            if (file_exists($build_composer_path)) {
+                $composer_data = json_decode(file_get_contents($build_composer_path), true);
+
+                // Remove the framework dependency
+                unset($composer_data['require']['wpmoo/wpmoo']);
+
+                // Remove any path repositories to ensure clean installation from Packagist
+                unset($composer_data['repositories']);
+
+                file_put_contents($build_composer_path, json_encode($composer_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            }
+
+            // Install the plugin's own dependencies into the build directory.
+            $this->run_process([ 'composer', 'install', '--no-dev', '--optimize-autoloader' ], $output, false, $build_path);
+
+            // Now, bundle the WPMoo framework into a separate 'wpmoo-core' directory.
+            $output->writeln('> Bundling WPMoo framework into wpmoo-core...');
             $wpmoo_core_path = $build_path . '/wpmoo-core';
             $this->run_process([ 'mkdir', '-p', $wpmoo_core_path ], $output);
 
-            // Copy the WPMoo framework to the separate directory respecting its .gitattributes
             $source_wpmoo_path = $this->get_cwd() . '/vendor/wpmoo/wpmoo';
             if (is_dir($source_wpmoo_path)) {
-                // Use our new method that respects .gitattributes for framework files too
-                $this->copy_vendor_with_gitattributes($source_wpmoo_path, $wpmoo_core_path);
-            }
+                // Use `git archive` to create a clean copy respecting .gitattributes
+                $this->run_shell_command_wrapper('cd ' . escapeshellarg($source_wpmoo_path) . ' && git archive HEAD | tar -x -C ' . escapeshellarg($wpmoo_core_path), $output, true);
 
-            // For the plugin itself, we only need its own autoloader dependencies (not framework ones)
-            // We'll create a minimal vendor directory with only truly necessary dependencies
-            $vendor_path = $build_path . '/vendor';
-            $this->run_process([ 'mkdir', '-p', $vendor_path ], $output);
-
-            // Copy only the autoloader files that the plugin itself needs
-            $source_autoload_path = $this->get_cwd() . '/vendor/autoload.php';
-            if (file_exists($source_autoload_path)) {
-                $this->run_process([ 'cp', $source_autoload_path, $vendor_path . '/' ], $output);
-            }
-
-            // Copy the composer directory with autoloader files
-            $source_composer_path = $this->get_cwd() . '/vendor/composer';
-            if (is_dir($source_composer_path)) {
-                $this->run_process([ 'cp', '-r', $source_composer_path, $vendor_path . '/' ], $output);
-            }
-
-            // Additionally, copy other vendor packages respecting their .gitattributes files
-            $source_vendor_path = $this->get_cwd() . '/vendor';
-            if (is_dir($source_vendor_path)) {
-                // Use our new method that respects .gitattributes
-                $this->copy_vendor_with_gitattributes($source_vendor_path, $vendor_path);
+                // The framework also has dependencies, install them inside wpmoo-core
+                $output->writeln('> Installing production dependencies for the bundled framework...');
+                $this->run_process([ 'composer', 'install', '--no-dev', '--optimize-autoloader' ], $output, false, $wpmoo_core_path);
             }
         }
 
-        // For WPMoo framework distribution, we still need to include the autoloader for proper functionality
+        // For WPMoo framework distribution, install its production dependencies.
         if ($project['type'] === 'wpmoo-framework') {
-            $source_autoload_path = $this->get_cwd() . '/vendor/autoload.php';
-            $target_vendor_path = $build_path . '/vendor';
-
-            if (file_exists($source_autoload_path)) {
-                $this->run_process([ 'mkdir', '-p', $target_vendor_path ], $output);
-
-                // Copy the autoloader files
-                $this->run_process([ 'cp', $source_autoload_path, $target_vendor_path . '/' ], $output);
-
-                // Copy the composer directory with autoloader files
-                $source_composer_path = $this->get_cwd() . '/vendor/composer';
-                if (is_dir($source_composer_path)) {
-                    $this->run_process([ 'cp', '-r', $source_composer_path, $target_vendor_path . '/' ], $output);
-                }
-            }
+            $output->writeln('> Preparing production dependencies for framework...');
+            $this->run_process([ 'composer', 'install', '--no-dev', '--optimize-autoloader' ], $output, false, $build_path);
         }
 
         if (! $input->getOption('build-only')) {
@@ -312,149 +297,6 @@ class DeployCommand extends BaseCommand
                 ( new Process([ 'svn', 'rm', '--force', $file ], $this->svn_path) )->mustRun();
             }
         }
-    }
-
-    private function get_ignored_files_from_gitattributes($directory)
-    {
-        $gitattributes_path = $directory . '/.gitattributes';
-        $ignored_files = [];
-
-        if (file_exists($gitattributes_path)) {
-            $lines = file($gitattributes_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            foreach ($lines as $line) {
-                $parts = explode(' ', trim($line));
-                if (isset($parts[1]) && $parts[1] === 'export-ignore') {
-                    $ignored_files[] = $parts[0];
-                }
-            }
-        }
-
-        return $ignored_files;
-    }
-
-    private function copy_vendor_with_gitattributes($source, $target)
-    {
-        // Get configuration for vendor packages
-        $config_include = $this->config_manager->get('dist.vendor_packages.include', []);
-        $config_exclude = $this->config_manager->get('dist.vendor_packages.exclude', []);
-        $selective_exclusion = $this->config_manager->get('dist.vendor_packages.selective_exclusion', []);
-
-        // Check if we should handle wpmoo framework specially
-        $wpmoo_handling = $this->config_manager->get('dist.vendor_packages.wpmoo_handling', 'include'); // Options: 'include', 'exclude', 'separate'
-
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS)
-        );
-
-        foreach ($iterator as $item) {
-            $relative_path = substr($item->getPathname(), strlen($source) + 1);
-
-            // Determine the vendor package directory to check its .gitattributes
-            $path_parts = explode('/', $relative_path);
-            if (count($path_parts) >= 2) {
-                // Path format: vendor/package-name/... or vendor/vendor-name/package-name/...
-                $vendor_namespace = $path_parts[0];
-                $vendor_name = $path_parts[1];
-
-                // For namespaced packages like vendor/vendornamespace/packagename/...
-                $full_package_name = $vendor_namespace . '/' . $vendor_name;
-
-                $should_copy = true;
-
-                // Handle wpmoo framework specially according to configuration
-                if ($full_package_name === 'wpmoo/wpmoo') {
-                    if ($wpmoo_handling === 'exclude') {
-                        $should_copy = false;
-                    } elseif ($wpmoo_handling === 'separate' && $vendor_namespace === 'wpmoo' && $vendor_name === 'wpmoo') {
-                        // If it's wpmoo/wpmoo and handling is 'separate',
-                        // we'll handle this specially and not copy to regular vendor
-                        $should_copy = false;
-                    }
-                }
-                // Check configuration-based inclusion/exclusion for non-wpmoo packages
-                elseif (!empty($config_include)) {
-                    // If include list exists, only copy packages in that list
-                    $should_copy = in_array($full_package_name, $config_include);
-                } else if (!empty($config_exclude)) {
-                    // If only exclude list exists, copy all packages except those in the list
-                    $should_copy = !in_array($full_package_name, $config_exclude);
-                }
-
-                if ($should_copy) {
-                    $vendor_dir = $source . '/' . $vendor_namespace . '/' . $vendor_name;
-
-                    // Check for selective exclusion rules for this specific package
-                    $selective_exclusion_rules = [];
-                    if (isset($selective_exclusion[$full_package_name])) {
-                        $selective_exclusion_rules = $selective_exclusion[$full_package_name];
-                    }
-
-                    // Get ignored files for this package from .gitattributes
-                    $ignored_files = [];
-                    if (is_dir($vendor_dir)) {
-                        $ignored_files = $this->get_ignored_files_from_gitattributes($vendor_dir);
-                    }
-
-                    // Combine .gitattributes rules with selective exclusion rules
-                    $all_exclusion_rules = array_merge($ignored_files, $selective_exclusion_rules);
-
-                    $should_exclude = false;
-                    foreach ($all_exclusion_rules as $pattern) {
-                        if ($this->fnmatch($pattern, $relative_path)) {
-                            $should_exclude = true;
-                            break;
-                        }
-                    }
-
-                    if (!$should_exclude) {
-                        $target_path = $target . '/' . $relative_path;
-                        if ($item->isDir()) {
-                            if (!is_dir($target_path)) {
-                                mkdir($target_path, 0755, true);
-                            }
-                        } else {
-                            copy($item->getPathname(), $target_path);
-                        }
-                    } else {
-                        // File excluded by .gitattributes or selective exclusion rules
-                    }
-                } else {
-                    // Package excluded by configuration or special wpmoo handling
-                }
-            } else {
-                // If path doesn't match vendor structure, just copy
-                // Also check global exclusion patterns
-                $global_exclusion_patterns = $this->config_manager->get('dist.exclude_patterns', []);
-                $should_exclude = false;
-
-                foreach ($global_exclusion_patterns as $pattern) {
-                    if ($this->fnmatch($pattern, $relative_path)) {
-                        $should_exclude = true;
-                        break;
-                    }
-                }
-
-                if (!$should_exclude) {
-                    $target_path = $target . '/' . $relative_path;
-                    if ($item->isDir()) {
-                        if (!is_dir($target_path)) {
-                            mkdir($target_path, 0755, true);
-                        }
-                    } else {
-                        copy($item->getPathname(), $target_path);
-                    }
-                }
-            }
-        }
-    }
-
-    // A simple implementation of fnmatch for pattern matching
-    private function fnmatch($pattern, $string) {
-        // Convert glob pattern to regex
-        $pattern = preg_quote($pattern, '#');
-        $pattern = str_replace('\*', '.*', $pattern);
-        $pattern = str_replace('\?', '.', $pattern);
-        return preg_match('#^' . $pattern . '$#', $string);
     }
 
     private function svn_tag(string $version_string, OutputInterface $output, bool $is_dry_run)
