@@ -4,6 +4,7 @@ namespace WPMoo\CLI\Commands\Framework;
 
 use WPMoo\CLI\Support\BaseCommand;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
 
@@ -26,6 +27,27 @@ class DeployBuildCommand extends BaseCommand
         $project = $this->identify_project();
         if ($project['type'] !== 'wpmoo-framework' && $project['type'] !== 'wpmoo-plugin') {
             $output->writeln('<error>This command can only be run from the root of a WPMoo framework or plugin project.</error>');
+            return self::FAILURE;
+        }
+
+        // Build assets before packaging.
+        $output->writeln('> Building assets...');
+        try {
+            $application = $this->getApplication();
+            if (! $application) {
+                $output->writeln('<error>Application instance not found to run build command.</error>');
+                return self::FAILURE;
+            }
+            $buildCommand = $application->find('build');
+            $buildInput = new ArrayInput([]);
+            $buildReturnCode = $buildCommand->run($buildInput, $output);
+
+            if ($buildReturnCode !== self::SUCCESS) {
+                $output->writeln('<error>WPMoo build command failed. Aborting.</error>');
+                return self::FAILURE;
+            }
+        } catch (\Exception $e) {
+            $output->writeln("<error>Error running build command: {$e->getMessage()}</error>");
             return self::FAILURE;
         }
 
