@@ -51,26 +51,65 @@ class ConfigManager
      */
     private function load_config(string $start_path): void
     {
-        $this->project_root = $start_path;
+        // Find project root first
+        $this->project_root = $this->find_project_root($start_path);
 
-        // Load the main wpmoo-config.yml file (for backwards compatibility)
-        $main_config_file = $this->find_main_config_file($start_path);
-        if ($main_config_file) {
-            $this->project_root = dirname($main_config_file);
-            $this->config = $this->load_yaml_file($main_config_file);
+        if (!$this->project_root) {
+            $this->project_root = $start_path;
+            return;
         }
 
-        // Load wpmoo-config directory files if they exist
+        // 1. Try loading legacy wpmoo-config.yml
+        $legacy_config_file = $this->project_root . '/wpmoo-config.yml';
+        if ($this->filesystem->file_exists($legacy_config_file)) {
+            $this->config = $this->load_yaml_file($legacy_config_file);
+        }
+
+        // 2. Load wpmoo-config directory files if they exist (merges with/overrides legacy)
         $wpmoo_config_dir = $this->project_root . '/wpmoo-config';
         if ($this->filesystem->file_exists($wpmoo_config_dir) && is_dir($wpmoo_config_dir)) {
             $this->load_config_directory($wpmoo_config_dir);
         }
 
-        // Also check for 'config' directory for potential future compatibility
+        // 3. Also check for 'config' directory for potential future compatibility
         $config_dir = $this->project_root . '/config';
         if ($this->filesystem->file_exists($config_dir) && is_dir($config_dir)) {
             $this->load_config_directory($config_dir);
         }
+    }
+
+    /**
+     * Finds the project root by looking for configuration markers.
+     *
+     * @param string $start_path
+     * @return string|null The path to the project root or null if not found.
+     */
+    private function find_project_root(string $start_path): ?string
+    {
+        $current_dir = $start_path;
+        while ($current_dir && $current_dir !== dirname($current_dir)) {
+            // Check for legacy single file
+            if ($this->filesystem->file_exists($current_dir . '/wpmoo-config.yml')) {
+                return $current_dir;
+            }
+
+            // Check for new config directory structure
+            if ($this->filesystem->file_exists($current_dir . '/wpmoo-config/wpmoo-settings.yml')) {
+                return $current_dir;
+            }
+
+            $current_dir = dirname($current_dir);
+        }
+
+        // Check root one last time
+        if ($this->filesystem->file_exists($current_dir . '/wpmoo-config.yml')) {
+            return $current_dir;
+        }
+         if ($this->filesystem->file_exists($current_dir . '/wpmoo-config/wpmoo-settings.yml')) {
+            return $current_dir;
+        }
+
+        return null;
     }
 
     /**
@@ -133,32 +172,6 @@ class ConfigManager
         }
 
         return $merged;
-    }
-
-    /**
-     * Finds the wpmoo-config.yml file by traversing up from the start path.
-     *
-     * @param string $start_path
-     * @return string|null The path to the config file or null if not found.
-     */
-    private function find_main_config_file(string $start_path): ?string
-    {
-        $current_dir = $start_path;
-        while ($current_dir && $current_dir !== dirname($current_dir)) {
-            $config_file = $current_dir . '/wpmoo-config.yml';
-            if ($this->filesystem->file_exists($config_file)) { // Modified
-                return $config_file;
-            }
-            $current_dir = dirname($current_dir);
-        }
-
-        // Check root one last time
-        $config_file = $current_dir . '/wpmoo-config.yml';
-        if ($this->filesystem->file_exists($config_file)) { // Modified
-            return $config_file;
-        }
-
-        return null;
     }
 
     /**
