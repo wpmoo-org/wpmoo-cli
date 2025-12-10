@@ -13,9 +13,17 @@ use Symfony\Component\Process\Process;
  *
  * @package WPMoo\CLI\Commands
  * @since 0.1.0
+ * @link https://wpmoo.org   WPMoo – WordPress Micro Object-Oriented Framework.
+ * @link https://github.com/wpmoo/wpmoo   GitHub Repository.
+ * @license https://spdx.org/licenses/GPL-2.0-or-later.html   GPL-2.0-or-later
  */
 class DeployDistCommand extends BaseCommand
 {
+    /**
+     * Configure the command.
+     *
+     * @return void
+     */
     protected function configure()
     {
         $this->setName('deploy:dist')
@@ -23,6 +31,13 @@ class DeployDistCommand extends BaseCommand
             ->setAliases(['deploy']);
     }
 
+    /**
+     * Execute the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     * @return int The command exit status.
+     */
     public function handle_execute(InputInterface $input, OutputInterface $output): int
     {
         $project = $this->identify_project();
@@ -64,15 +79,15 @@ class DeployDistCommand extends BaseCommand
 
         $dist_root = $this->get_cwd() . '/dist';
         $build_path = $dist_root . '/' . $slug;
-        
+
         $output->writeln("> Creating a clean build in {$build_path}...");
-        
+
         // Clean dist root
         if (is_dir($dist_root)) {
             $this->run_process(['rm', '-rf', $dist_root], $output);
         }
         $this->run_process(['mkdir', '-p', $build_path], $output);
-        
+
         $this->run_shell_command_wrapper('git archive HEAD | tar -x -C ' . escapeshellarg($build_path), $output, true);
 
         // Explicitly copy composer.json as git archive might ignore it due to .gitattributes
@@ -134,6 +149,13 @@ class DeployDistCommand extends BaseCommand
         return self::SUCCESS;
     }
 
+    /**
+     * Clean up Composer-related files from the distributable package.
+     *
+     * @param string $path The path to the distributable package.
+     * @param OutputInterface $output The output interface.
+     * @return void
+     */
     private function cleanup_composer_files(string $path, OutputInterface $output)
     {
         $output->writeln('> Cleaning up Composer files from distributable...');
@@ -145,6 +167,16 @@ class DeployDistCommand extends BaseCommand
         }
     }
 
+    /**
+     * Run a shell process.
+     *
+     * @param array $command The command to run as an array of arguments.
+     * @param OutputInterface $output The output interface.
+     * @param bool $quiet Whether to suppress output from the process.
+     * @param string|null $cwd The current working directory for the process.
+     * @param array $env Environment variables for the process.
+     * @return void
+     */
     private function run_process(array $command, OutputInterface $output, bool $quiet = false, ?string $cwd = null, array $env = []): void
     {
         $process = new Process($command, $cwd, $env);
@@ -157,6 +189,15 @@ class DeployDistCommand extends BaseCommand
         );
     }
 
+    /**
+     * Run a shell command via `Process::fromShellCommandline`.
+     *
+     * @param string $command The shell command string.
+     * @param OutputInterface $output The output interface.
+     * @param bool $quiet Whether to suppress output from the process.
+     * @param string|null $cwd The current working directory for the process.
+     * @return void
+     */
     private function run_shell_command_wrapper(string $command, OutputInterface $output, bool $quiet = false, ?string $cwd = null)
     {
         $process = Process::fromShellCommandline($command, $cwd);

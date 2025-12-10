@@ -16,15 +16,30 @@ use WPMoo\CLI\Support\VersionManager;
  *
  * @package WPMoo\CLI\Commands
  * @since 0.1.0
+ * @link https://wpmoo.org   WPMoo – WordPress Micro Object-Oriented Framework.
+ * @link https://github.com/wpmoo/wpmoo   GitHub Repository.
+ * @license https://spdx.org/licenses/GPL-2.0-or-later.html   GPL-2.0-or-later
  */
 class DeployZipCommand extends BaseCommand
 {
+    /**
+     * Configure the command.
+     *
+     * @return void
+     */
     protected function configure()
     {
         $this->setName('deploy:zip')
             ->setDescription('Creates a zip archive of the distributable package.');
     }
 
+    /**
+     * Execute the command.
+     *
+     * @param InputInterface $input The input interface.
+     * @param OutputInterface $output The output interface.
+     * @return int The command exit status.
+     */
     public function handle_execute(InputInterface $input, OutputInterface $output): int
     {
         $project = $this->identify_project();
@@ -76,7 +91,7 @@ class DeployZipCommand extends BaseCommand
         // Determine Version
         $version_manager = new VersionManager($this);
         $version = $version_manager->get_current_version($project);
-        
+
         $zip_filename = "{$project_slug}-{$version}.zip";
 
         $output->writeln("> Zipping files into {$zip_filename}...");
@@ -97,7 +112,7 @@ class DeployZipCommand extends BaseCommand
             if (!$file->isDir()) {
                 // Get real and relative path for current file
                 $filePath = $file->getRealPath();
-                
+
                 // Relative path inside dist (e.g. "slug/plugin.php")
                 $relativePath = substr($filePath, strlen($dist_path) + 1);
 
