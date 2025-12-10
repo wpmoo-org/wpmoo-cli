@@ -4,6 +4,7 @@ namespace WPMoo\CLI\Support;
 
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 use WPMoo\CLI\Support\Filesystem;
 
 /**
@@ -20,11 +21,6 @@ class NodeEnvironment
     private Filesystem $filesystem;
 
     /**
-     * @var string The path to the CLI's root directory.
-     */
-    private string $cli_root;
-
-    /**
      * NodeEnvironment constructor.
      *
      * @param Filesystem|null $filesystem Optional filesystem instance.
@@ -32,7 +28,6 @@ class NodeEnvironment
     public function __construct(?Filesystem $filesystem = null)
     {
         $this->filesystem = $filesystem ?? new Filesystem();
-        $this->cli_root = dirname(__DIR__, 2); // Points to wpmoo-cli root (containing package.json)
     }
 
     /**
