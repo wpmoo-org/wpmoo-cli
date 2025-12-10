@@ -14,11 +14,11 @@ use Symfony\Component\Process\Process;
  * @package WPMoo\CLI\Commands
  * @since 0.1.0
  */
-class DeployBuildCommand extends BaseCommand
+class DeployDistCommand extends BaseCommand
 {
     protected function configure()
     {
-        $this->setName('deploy:build')
+        $this->setName('deploy:dist')
             ->setDescription('Package in the `dist` directory.');
     }
 
