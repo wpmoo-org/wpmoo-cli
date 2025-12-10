@@ -46,7 +46,7 @@ class CheckCsCommand extends BaseCommand
             return self::FAILURE;
         }
 
-        $process = new Process([$phpcs, '-n', '--exclude=dist/'], $this->get_cwd());
+        $process = new Process([$phpcs, '-n', '--ignore=dist/'], $this->get_cwd());
         $process->setTimeout(300);
 
         $process->run(function ($type, $buffer) use ($output) {
