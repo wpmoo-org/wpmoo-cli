@@ -40,7 +40,7 @@ class CheckLintCommand extends BaseCommand
     {
         $output->writeln('<info>Running PHP Lint...</info>');
 
-        $command = "find . -path './vendor' -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l";
+        $command = "find . -path './vendor' -prune -o -path './dist' -prune -o -name '*.php' -print0 | xargs -0 -n1 php -l";
 
         $process = Process::fromShellCommandline($command, $this->get_cwd());
         $process->setTimeout(300);

@@ -46,7 +46,7 @@ class CheckCbfCommand extends BaseCommand
             return self::FAILURE;
         }
 
-        $process = new Process([$phpcbf], $this->get_cwd());
+        $process = new Process([$phpcbf, '--exclude=dist/'], $this->get_cwd());
         $process->setTimeout(300);
 
         $process->run(function ($type, $buffer) use ($output) {
