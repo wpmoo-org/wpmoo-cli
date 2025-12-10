@@ -109,7 +109,13 @@ class DeployZipCommand extends BaseCommand
 
         $zip->close();
 
-        $output->writeln("<success>Zip package created: {$zip_filename}</success>");
+        // Move zip file to dist directory
+        $final_path = $dist_path . '/' . $zip_filename;
+        if (file_exists($this->get_cwd() . '/' . $zip_filename)) {
+            rename($this->get_cwd() . '/' . $zip_filename, $final_path);
+        }
+
+        $output->writeln("<success>Zip package created: dist/{$zip_filename}</success>");
 
         return self::SUCCESS;
     }
