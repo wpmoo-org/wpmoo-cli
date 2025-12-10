@@ -9,6 +9,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use ZipArchive;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
+use WPMoo\CLI\Support\VersionManager;
 
 /**
  * Creates a zip archive of the distributable package.
@@ -62,31 +63,21 @@ class DeployZipCommand extends BaseCommand
             return self::FAILURE;
         }
 
-        $project_slug = basename($this->get_cwd()); // Fallback
+        // Determine Slug
+        $project_slug = basename($this->get_cwd());
         if (file_exists($this->get_cwd() . '/composer.json')) {
             $composer_data = json_decode(file_get_contents($this->get_cwd() . '/composer.json'), true);
             if (isset($composer_data['name'])) {
-                // Use package name "vendor/package" -> "package"
                 $parts = explode('/', $composer_data['name']);
                 $project_slug = end($parts);
             }
         }
 
-        $zip_filename = $project_slug . '.zip';
-        $zip_path = $dist_path . '/' . $zip_filename; // Place zip inside dist? Or outside? 
-        // Placing it outside is probably better so it doesn't get zipped into itself if we run it again without cleaning (though deploy:dist cleans).
-        // Let's place it in the root for now, or maybe in dist but we need to exclude it? 
-        // deploy:dist cleans dist, so it's safe to put it in dist AFTER deploy:dist runs.
+        // Determine Version
+        $version_manager = new VersionManager($this);
+        $version = $version_manager->get_current_version($project);
         
-        // Wait, standard WP plugin zips usually contain a folder with the plugin name.
-        // `deploy:dist` creates the contents directly in `dist`.
-        // So if I zip `dist/*`, when I unzip, I get loose files.
-        // WordPress expects `plugin-slug/files`.
-        
-        // Use logic: 
-        // If it's a plugin, we probably want the zip to contain a root folder `plugin-slug`.
-        // `deploy:dist` currently puts files *directly* in `dist`.
-        // So `deploy:zip` should probably zip `dist` content INTO a folder inside the zip.
+        $zip_filename = "{$project_slug}-{$version}.zip";
 
         $output->writeln("> Zipping files into {$zip_filename}...");
 
@@ -106,11 +97,13 @@ class DeployZipCommand extends BaseCommand
             if (!$file->isDir()) {
                 // Get real and relative path for current file
                 $filePath = $file->getRealPath();
+                
+                // Relative path inside dist (e.g. "slug/plugin.php")
                 $relativePath = substr($filePath, strlen($dist_path) + 1);
 
-                // Add file to zip archive
-                // We add it under the project slug folder to be WP compliant
-                $zip->addFile($filePath, $project_slug . '/' . $relativePath);
+                // Add file to zip archive using relative path
+                // This ensures the zip structure matches dist structure (slug/...)
+                $zip->addFile($filePath, $relativePath);
             }
         }
 

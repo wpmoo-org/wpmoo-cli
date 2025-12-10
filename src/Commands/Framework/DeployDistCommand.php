@@ -30,6 +30,16 @@ class DeployDistCommand extends BaseCommand
             return self::FAILURE;
         }
 
+        // Determine project slug
+        $slug = basename($this->get_cwd());
+        if (file_exists($this->get_cwd() . '/composer.json')) {
+            $composer_data = json_decode(file_get_contents($this->get_cwd() . '/composer.json'), true);
+            if (isset($composer_data['name'])) {
+                $parts = explode('/', $composer_data['name']);
+                $slug = end($parts);
+            }
+        }
+
         // Build assets before packaging.
         $output->writeln('> Building assets...');
         try {
@@ -51,12 +61,17 @@ class DeployDistCommand extends BaseCommand
             return self::FAILURE;
         }
 
-        $build_path = $this->get_cwd() . '/dist';
+        $dist_root = $this->get_cwd() . '/dist';
+        $build_path = $dist_root . '/' . $slug;
+        
         $output->writeln("> Creating a clean build in {$build_path}...");
-        if (is_dir($build_path)) {
-            $this->run_process(['rm', '-rf', $build_path], $output);
+        
+        // Clean dist root
+        if (is_dir($dist_root)) {
+            $this->run_process(['rm', '-rf', $dist_root], $output);
         }
-        $this->run_process(['mkdir', $build_path], $output);
+        $this->run_process(['mkdir', '-p', $build_path], $output);
+        
         $this->run_shell_command_wrapper('git archive HEAD | tar -x -C ' . escapeshellarg($build_path), $output, true);
 
         // Explicitly copy composer.json as git archive might ignore it due to .gitattributes
@@ -114,7 +129,7 @@ class DeployDistCommand extends BaseCommand
 
         $output->writeln('');
         $output->writeln('<success>Build complete!</success>');
-        $output->writeln('The distributable package is located in the <info>dist</info> directory.');
+        $output->writeln("The distributable package is located in the <info>dist/{$slug}</info> directory.");
         return self::SUCCESS;
     }
 
