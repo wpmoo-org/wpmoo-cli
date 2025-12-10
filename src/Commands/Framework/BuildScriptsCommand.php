@@ -44,7 +44,8 @@ class BuildScriptsCommand extends BaseCommand
 
         // 1. Ensure internal Node.js environment is ready
         $node_env = new NodeEnvironment($this->filesystem);
-        if (!$node_env->ensure_dependencies($io, $this->get_cwd())) {
+        // Use CLI root for dependencies.
+        if (!$node_env->ensure_dependencies($io, dirname(__DIR__, 3))) {
             return 1;
         }
 
