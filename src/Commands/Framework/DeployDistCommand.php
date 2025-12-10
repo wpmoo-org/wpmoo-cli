@@ -19,7 +19,8 @@ class DeployDistCommand extends BaseCommand
     protected function configure()
     {
         $this->setName('deploy:dist')
-            ->setDescription('Package in the `dist` directory.');
+            ->setDescription('Package in the `dist` directory.')
+            ->setAliases(['deploy']);
     }
 
     public function handle_execute(InputInterface $input, OutputInterface $output): int
