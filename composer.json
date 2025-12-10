@@ -27,7 +27,10 @@
     "symfony/process": "^5.4",
     "symfony/finder": "^5.4",
     "gettext/gettext": "^4.8",
-    "wp-cli/i18n-command": "^2.1"
+    "wp-cli/i18n-command": "^2.1",
+    "wpmoo/wpmoo-coding-standards": "dev-main",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "phpstan/phpstan": "^1.11"
   },
   "extra": {
     "branch-alias": {
@@ -49,9 +52,6 @@
     "bin/moo"
   ],
   "require-dev": {
-    "wpmoo/wpmoo-coding-standards": "dev-main",
-    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-    "phpstan/phpstan": "^1.11"
   },
   "config": {
     "allow-plugins": {
