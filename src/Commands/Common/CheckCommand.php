@@ -29,7 +29,7 @@ class CheckCommand extends BaseCommand
         $this->setName('check:all')
             ->setDescription('Runs all checks (validate, lint, phpcs, phpcbf, phpstan).')
             ->setHelp('This command runs all code quality checks (validate, lint, phpcs, phpcbf, phpstan).')
-            ->setAliases(['build']);
+            ->setAliases(['check']);
     }
 
     /**
