@@ -51,6 +51,10 @@ class DeployReleaseCommand extends BaseCommand
             $output->writeln('<comment>Operation cancelled.</comment>');
             return self::SUCCESS;
         }
+        if ($new_version === $current_version) {
+            $output->writeln("<error>The new version ({$new_version}) cannot be the same as the current version ({$current_version}).</error>");
+            return self::FAILURE;
+        }
         if (! $version_manager->is_valid_version($new_version)) {
             $output->writeln("<error>Invalid version format: {$new_version}</error>");
             return self::FAILURE;
