@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const { execSync } = require('child_process');
-const yaml = require('js-yaml');
+const yaml = require(path.join(__dirname, '../../node_modules/js-yaml'));
 
 // 1. Determine the Project Root (Target)
 const targetDir = process.argv[2] 

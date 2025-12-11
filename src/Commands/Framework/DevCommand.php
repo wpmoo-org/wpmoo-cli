@@ -48,7 +48,7 @@ class DevCommand extends BaseCommand
 
         $project_root = $project['main_file'] ? dirname($project['main_file']) : $this->get_cwd();
         $cli_root = dirname(__DIR__, 3);
-        $bin_dir = $project_root . '/node_modules/.bin';
+        $bin_dir = $cli_root . '/node_modules/.bin';
 
         // Ensure internal Node.js environment is ready
         $node_env = new NodeEnvironment($this->filesystem);
