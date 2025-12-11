@@ -52,7 +52,7 @@ class DevCommand extends BaseCommand
 
         // Ensure internal Node.js environment is ready
         $node_env = new NodeEnvironment($this->filesystem);
-        if (!$node_env->ensure_dependencies($io, $project_root)) {
+        if (!$node_env->ensure_dependencies($io, $cli_root)) {
             return self::FAILURE;
         }
 
