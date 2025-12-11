@@ -27,7 +27,9 @@ class CheckCommand extends BaseCommand
     protected function configure()
     {
         $this->setName('check:all')
-            ->setDescription('Runs all checks (validate, lint, phpcs, phpcbf, phpstan).');
+            ->setDescription('Runs all checks (validate, lint, phpcs, phpcbf, phpstan).')
+            ->setHelp('This command runs all code quality checks (validate, lint, phpcs, phpcbf, phpstan).')
+            ->setAliases(['build']);
     }
 
     /**
