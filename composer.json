@@ -28,7 +28,7 @@
     "symfony/finder": "^5.4",
     "gettext/gettext": "^4.8",
     "wp-cli/i18n-command": "^2.1",
-    "wpmoo/wpmoo-coding-standards": "dev-main",
+    "wpmoo/wpmoo-coding-standards": "dev-dev",
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
     "phpstan/phpstan": "^1.11"
   },
@@ -51,8 +51,7 @@
   "bin": [
     "bin/moo"
   ],
-  "require-dev": {
-  },
+  "require-dev": {},
   "config": {
     "allow-plugins": {
       "dealerdirect/phpcodesniffer-composer-installer": true,
