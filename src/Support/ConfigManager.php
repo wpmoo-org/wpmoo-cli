@@ -94,7 +94,7 @@ class ConfigManager
             }
 
             // Check for new config directory structure
-            if ($this->filesystem->file_exists($current_dir . '/wpmoo-config/wpmoo-settings.yml')) {
+            if ($this->filesystem->file_exists($current_dir . 'settings.yml')) {
                 return $current_dir;
             }
 
@@ -105,7 +105,7 @@ class ConfigManager
         if ($this->filesystem->file_exists($current_dir . '/wpmoo-config.yml')) {
             return $current_dir;
         }
-        if ($this->filesystem->file_exists($current_dir . '/wpmoo-config/wpmoo-settings.yml')) {
+        if ($this->filesystem->file_exists($current_dir . 'settings.yml')) {
             return $current_dir;
         }
 

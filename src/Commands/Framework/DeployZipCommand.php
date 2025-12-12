@@ -92,6 +92,10 @@ class DeployZipCommand extends BaseCommand
         $version_manager = new VersionManager($this);
         $version = $version_manager->get_current_version($project);
 
+        // NOTE: The zip filename is currently generated directly in code and does not
+        // utilize the 'zip.filename' setting from deploy.yml. If you wish to customize
+        // the zip filename, please modify this line directly or update the command
+        // to read from the configuration.
         $zip_filename = "{$project_slug}-{$version}.zip";
 
         $output->writeln("> Zipping files into {$zip_filename}...");

@@ -62,7 +62,7 @@ class DevCommand extends BaseCommand
         $dev_config = $config_manager->get('dev', []);
 
         $browser_sync_config = $dev_config['browser_sync'] ?? [];
-        $dev_theme = $dev_config['theme'] ?? 'amber';
+        $dev_theme = $this->config_manager->get('dev.theme', $this->config_manager->get('theme', 'amber'));
 
         // Define script paths based on context
         $context_dir = ($project['type'] === 'wpmoo-framework') ? 'framework' : 'plugin';
