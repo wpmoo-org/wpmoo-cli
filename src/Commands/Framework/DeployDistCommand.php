@@ -107,7 +107,7 @@ class DeployDistCommand extends BaseCommand
             $build_composer_path = $build_path . '/composer.json';
             if (file_exists($build_composer_path)) {
                 $composer_data = json_decode(file_get_contents($build_composer_path), true);
-                unset($composer_data['require']['wpmoo/wpmoo'], $composer_data['repositories'], $composer_data['scripts']);
+                unset($composer_data['require']['wpmoo/wpmoo'], $composer_data['repositories'], $composer_data['scripts'], $composer_data['require-dev']);
                 file_put_contents($build_composer_path, json_encode($composer_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
             }
             $this->run_process(['composer', 'install', '--no-dev', '--optimize-autoloader'], $output, false, $build_path);
@@ -119,6 +119,12 @@ class DeployDistCommand extends BaseCommand
             $source_wpmoo_path = $this->get_cwd() . '/vendor/wpmoo/wpmoo';
             if (is_dir($source_wpmoo_path)) {
                 $this->run_shell_command_wrapper('cd ' . escapeshellarg($source_wpmoo_path) . ' && git archive HEAD | tar -x -C ' . escapeshellarg($wpmoo_core_path), $output, true);
+
+                // Explicitly copy composer.json as git archive might ignore it due to .gitattributes
+                if (file_exists($source_wpmoo_path . '/composer.json')) {
+                    copy($source_wpmoo_path . '/composer.json', $wpmoo_core_path . '/composer.json');
+                }
+
                 $core_composer_path = $wpmoo_core_path . '/composer.json';
                 if (file_exists($core_composer_path)) {
                     $core_composer_data = json_decode(file_get_contents($core_composer_path), true);
