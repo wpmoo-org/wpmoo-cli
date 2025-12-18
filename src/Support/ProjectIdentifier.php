@@ -78,8 +78,8 @@ class ProjectIdentifier
                 $content = $this->filesystem->get_file_contents($file);
                 if (
                     preg_match('/(wpmoo|WPMoo)/i', $content) &&
-                    ( preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
-                        preg_match('/^[ \t\/*#@]*Theme Name:/im', $content) )
+                    ( preg_match('/Plugin Name:/i', $content) ||
+                        preg_match('/Theme Name:/i', $content) )
                 ) {
                     return 'wpmoo-plugin';
                 }
@@ -121,6 +121,11 @@ class ProjectIdentifier
     public function identify_project(): array
     {
         $cwd = $this->filesystem->get_cwd();
+        $composer_file_path = $this->find_composer_json_upwards($cwd);
+        $composer_data = null;
+        if ($composer_file_path) {
+            $composer_data = json_decode($this->filesystem->get_file_contents($composer_file_path), true);
+        }
 
         // Check for wpmoo framework project.
         $wpmoo_root_path = $cwd . '/wpmoo.php'; // Adjusted to check for wpmoo.php at root for framework detection
@@ -133,6 +138,7 @@ class ProjectIdentifier
                 'type' => 'wpmoo-framework',
                 'main_file' => $wpmoo_root_path,
                 'readme_file' => $cwd . '/readme.txt', // Check if readme.txt exists.
+                'composer_file' => $composer_file_path,
             ];
         }
 
@@ -144,8 +150,8 @@ class ProjectIdentifier
                 // Look for WPMoo in plugin header.
                 if (
                     preg_match('/(wpmoo|WPMoo)/i', $content) &&
-                    ( preg_match('/^[ \t\/*#@]*Plugin Name:/im', $content) ||
-                    preg_match('/^[ \t\/*#@]*Theme Name:/im', $content) )
+                    ( preg_match('/Plugin Name:/i', $content) ||
+                    preg_match('/Theme Name:/i', $content) )
                 ) {
                     $readme_path = $cwd . '/readme.txt';
                     return [
@@ -153,9 +159,21 @@ class ProjectIdentifier
                         'type' => 'wpmoo-plugin',
                         'main_file' => $file,
                         'readme_file' => $this->filesystem->file_exists($readme_path) ? $readme_path : null,
+                        'composer_file' => $composer_file_path,
                     ];
                 }
             }
+        }
+
+        // Check if it's a wpmoo-cli project itself.
+        if ($composer_data && ($composer_data['name'] ?? null) === 'wpmoo/wpmoo-cli') {
+            return [
+                'found' => true,
+                'type' => 'wpmoo-cli',
+                'main_file' => null, // CLI projects don't have a 'main file' like plugins/themes.
+                'readme_file' => null,
+                'composer_file' => $composer_file_path,
+            ];
         }
 
         return [
@@ -163,6 +181,7 @@ class ProjectIdentifier
             'type' => 'unknown',
             'main_file' => null,
             'readme_file' => null,
+            'composer_file' => $composer_file_path, // Include composer_file even if type is unknown
         ];
     }
 }

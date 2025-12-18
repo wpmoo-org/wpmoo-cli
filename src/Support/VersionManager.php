@@ -83,21 +83,43 @@ class VersionManager
 
     public function get_current_version(array $project_info): string
     {
-        $main_file = $project_info['main_file'];
-        if (! $main_file || ! file_exists($main_file)) {
-            return '0.0.0';
+        // Try to get version from composer.json first.
+        $composer_file = $project_info['composer_file'] ?? null;
+        if ($composer_file && file_exists($composer_file)) {
+            $version = $this->get_composer_version($composer_file);
+            if ($version !== '0.0.0') {
+                return $version;
+            }
         }
-        $file_content = file_get_contents($main_file);
-        if (preg_match('/^[ \t\/*#@]*Version:\s*(.*)$/im', $file_content, $matches)) {
-            return trim($matches[1]);
+
+        // Fallback to main_file (WordPress header) if composer.json doesn't exist or has no version.
+        $main_file = $project_info['main_file'] ?? null;
+        if ($main_file && file_exists($main_file)) {
+            $file_content = file_get_contents($main_file);
+            if (preg_match('/^[ \t\/*#@]*Version:\s*(.*)$/im', $file_content, $matches)) {
+                return trim($matches[1]);
+            }
         }
         return '0.0.0';
     }
 
+    /**
+     * Get the version from composer.json.
+     *
+     * @param string $composer_file The path to the composer.json file.
+     * @return string The version string, or '0.0.0' if not found.
+     */
+    private function get_composer_version(string $composer_file): string
+    {
+        $composer_data = json_decode(file_get_contents($composer_file), true);
+        return $composer_data['version'] ?? '0.0.0';
+    }
+
     public function update_version(array $project_info, string $new_version_string, OutputInterface $output): bool
     {
-        $main_file = $project_info['main_file'];
-        $readme_file = $project_info['readme_file'];
+        $main_file = $project_info['main_file'] ?? null;
+        $readme_file = $project_info['readme_file'] ?? null;
+        $composer_file = $project_info['composer_file'] ?? null;
         $update_success = true;
 
         if ($main_file && file_exists($main_file)) {
@@ -136,7 +158,42 @@ class VersionManager
                 $output->writeln("<comment>Could not find stable tag line in {$readme_file}, skipping.</comment>");
             }
         }
-                return $update_success;
+
+        if ($composer_file && file_exists($composer_file)) {
+            if (! $this->update_composer_version($composer_file, $new_version_string, $output)) {
+                $update_success = false;
+            }
+        }
+
+        return $update_success;
+    }
+
+    /**
+     * Update the version in composer.json.
+     *
+     * @param string $composer_file The path to the composer.json file.
+     * @param string $new_version_string The new version string.
+     * @param OutputInterface $output The output interface.
+     * @return bool True on success, false on failure.
+     */
+    private function update_composer_version(string $composer_file, string $new_version_string, OutputInterface $output): bool
+    {
+        $composer_data = json_decode(file_get_contents($composer_file), true);
+
+        if (isset($composer_data['version'])) {
+            $composer_data['version'] = $new_version_string;
+            $json_content = json_encode($composer_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            if (file_put_contents($composer_file, $json_content) !== false) {
+                $output->writeln("<info>Updated version in {$composer_file}</info>");
+                return true;
+            } else {
+                $output->writeln("<error>Failed to update version in {$composer_file}</error>");
+                return false;
+            }
+        } else {
+            $output->writeln("<comment>Could not find 'version' key in {$composer_file}, skipping.</comment>");
+            return false;
+        }
     }
 
     public function is_valid_version(string $version): bool
